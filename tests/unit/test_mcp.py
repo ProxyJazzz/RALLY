@@ -78,7 +78,7 @@ class TestToolRegistrationAndAbsenceOfForbiddenTools:
     """Verifies that only authorized tools are registered and forbidden tools are completely absent."""
 
     def test_registered_tools_exact_set(self, sim: IncidentSimulator):
-        server = create_rally_mcp_server(simulator=sim)
+        server = create_rally_mcp_server(simulator=sim, enable_alexa_tools=False)
         # Inspect registered tools from server
         registered_tool_names = set(server._tool_manager._tools.keys())
 
@@ -98,6 +98,19 @@ class TestToolRegistrationAndAbsenceOfForbiddenTools:
 
         assert registered_tool_names == expected_all
         assert len(registered_tool_names) == 8
+
+        # When Alexa tools are enabled (Phase 8), conversational tools are additionally present
+        server_with_alexa = create_rally_mcp_server(simulator=sim, enable_alexa_tools=True)
+        alexa_names = set(server_with_alexa._tool_manager._tools.keys())
+        expected_alexa = {
+            "get_incident_context",
+            "get_investigation_summary",
+            "get_action_plan",
+            "get_execution_status",
+            "get_verification_status",
+        }
+        assert alexa_names == (expected_all | expected_alexa)
+        assert len(alexa_names) == 13
 
     def test_forbidden_tools_strictly_absent(self, sim: IncidentSimulator):
         server = create_rally_mcp_server(simulator=sim)
