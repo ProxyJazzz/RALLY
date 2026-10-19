@@ -1,0 +1,75 @@
+/* RALLY — Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-black: #07090C;
+    --color-charcoal: #0D1117;
+    --color-graphite: #151A21;
+    --color-surface: #1B222C;
+    --color-border: #28313C;
+    --color-text: #F4F7FA;
+    --color-secondary: #AAB4C0;
+    --color-muted: #6F7A86;
+    --color-healthy: #35D07F;
+    --color-info: #4DA3FF;
+    --color-warning: #F2B84B;
+    --color-critical: #FF4D5A;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-charcoal);
+    color: var(--color-text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium font-mono uppercase tracking-wide;
+  }
+
+  .status-ok {
+    @apply bg-rally-healthy/10 text-rally-healthy border border-rally-healthy/20;
+  }
+
+  .status-unavailable {
+    @apply bg-rally-critical/10 text-rally-critical border border-rally-critical/20;
+  }
+
+  .status-checking {
+    @apply bg-rally-info/10 text-rally-info border border-rally-info/20;
+  }
+
+  .card {
+    @apply bg-rally-surface border border-rally-border rounded-lg p-5;
+  }
+
+  .pulse-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+}
