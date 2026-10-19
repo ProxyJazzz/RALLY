@@ -64,6 +64,16 @@ def map_exception_to_error_response(exc: Exception) -> MCPToolErrorResponse:
             message=str(exc),
             details={"fault_type": exc.fault_type},
         )
+    elif exc.__class__.__name__ == "IncidentNotFoundError":
+        return MCPToolErrorResponse(
+            error_code="INCIDENT_NOT_FOUND",
+            message=str(exc),
+        )
+    elif exc.__class__.__name__ in {"AlexaIntegrationError", "ActionPlanNotFoundError", "StaleIncidentContextError"}:
+        return MCPToolErrorResponse(
+            error_code="ALEXA_INTEGRATION_ERROR",
+            message=str(exc),
+        )
     elif isinstance(exc, SimulatorError):
         return MCPToolErrorResponse(
             error_code="SIMULATOR_ERROR",

@@ -17,8 +17,9 @@ def create_rally_mcp_server(
     server_name: str = "rally-mcp-server",
     instructions: str = (
         "RALLY Model Context Protocol Server. Provides deterministic operational "
-        "investigation tools and controlled remediation capabilities."
+        "investigation tools, conversational incident context, and controlled remediation capabilities."
     ),
+    enable_alexa_tools: bool = True,
 ) -> MCPServer:
     """Factory creating an official MCPServer configured with RALLY tools."""
     sim = simulator if simulator is not None else IncidentSimulator()
@@ -30,15 +31,24 @@ def create_rally_mcp_server(
     register_read_tools(server, sim)
     # Register 1 controlled write remediation tool
     register_write_tools(server, sim)
+    # Register conversational incident tools for Alexa+ if enabled
+    if enable_alexa_tools:
+        from alexa.tools import register_alexa_conversational_tools
+        register_alexa_conversational_tools(server)
     return server
 
 
 def create_rally_mcp_app(
     simulator: IncidentSimulator | None = None,
     server_name: str = "rally-mcp-server",
+    enable_alexa_tools: bool = True,
 ) -> Starlette:
     """Creates a Starlette ASGI application exposing the MCP server over Streamable HTTP."""
-    server = create_rally_mcp_server(simulator=simulator, server_name=server_name)
+    server = create_rally_mcp_server(
+        simulator=simulator,
+        server_name=server_name,
+        enable_alexa_tools=enable_alexa_tools,
+    )
     return server.streamable_http_app()
 
 

@@ -46,5 +46,11 @@ class Settings(BaseSettings):
     bedrock_max_retries: int = 2
     run_aws_integration_tests: bool = False
 
+    # ── Alexa+ MCP (Phase 8) ─────────────────────────────────────────────────
+    rally_mcp_public_url: str | None = None
+    rally_mcp_auth_enabled: bool = False
+    rally_mcp_oauth_resource: str | None = None
+    rally_mcp_required_scopes: list[str] = ["rally:incident:read", "rally:incident:write"]
+
 
 settings = Settings()
