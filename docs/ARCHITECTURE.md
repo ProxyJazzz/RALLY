@@ -250,6 +250,32 @@ No state transition should be performed only because an LLM says it should happe
 
 Write tools require policy checks and may require human approval.
 
+## 8.1 Incident Simulator Architecture (Phase 2)
+
+The incident simulator (`simulator/`) provides a deterministic, in-memory operational world model that future components (MCP tools in Phase 3, Agent in Phase 4) interact with.
+
+```text
+Future Architecture:
+  RALLY Agent → MCP Tool Layer → Incident Simulator → Services / Telemetry / Logs / Deployments
+
+Phase 2 Scope:
+  Incident Simulator → Services / Telemetry / Logs / Deployments
+```
+
+### Components
+- **Domain Layer (`simulator/domain/`)**: Strongly typed Pydantic models (`Service`, `Deployment`, `DeploymentDiff`, `Telemetry`, `LogEntry`, `DependencyHealth`, `Runbook`, `SimulationEvent`) and typed exceptions (`ServiceNotFoundError`, `DeploymentNotFoundError`, `FaultNotSupportedError`, `RollbackUnavailableError`, `InvalidStateTransitionError`, `InvalidIdentifierError`).
+- **Scenarios Layer (`simulator/scenarios/`)**: Deterministic fixture definitions for services (`checkout-service`, `payment-service`, `inventory-service`, `auth-service`), baseline and fault telemetry, structured logs, and dependencies.
+- **Service Layer (`simulator/services/`)**: `IncidentSimulator` engine managing in-memory operational state, input validation, audit events, fault injection (`CHECKOUT_REGRESSION`), rollback (`rollback_deployment`), and state resets.
+
+### Golden Scenario Lifecycle
+1. **Initial Baseline**: All 4 services are `HEALTHY`. `checkout-v41` is active with baseline error rate 0.67% (<1.0%).
+2. **Fault Injection (`CHECKOUT_REGRESSION`)**: `checkout-v42` is activated. `checkout-service` degrades to `DEGRADED`. Error rate rises to 18.4% (latency 420ms). Structured logs report `CHECKOUT_VALIDATION_REGRESSION` during order validation.
+3. **Dependency Isolation**: Downstream dependencies (`payment-service`, `inventory-service`, `auth-service`) remain `HEALTHY` with <0.5% error rate, proving the fault is isolated to `checkout-service`.
+4. **Controlled Rollback**: `checkout-v42` status is updated to `ROLLED_BACK`. `checkout-v41` is reinstated as active deployment.
+5. **Deterministic Recovery**: Error rate returns to 0.70% (<1.0% runbook threshold), latency normalizes to 88ms, and `checkout-service` returns to `HEALTHY`.
+6. **Audit Event Log**: All state transitions (`simulation_initialized`, `deployment_activated`, `fault_injected`, `service_health_changed`, `rollback_started`, `rollback_completed`) are appended to an immutable audit trail.
+
+
 ## 9. Execution Contract
 
 ```text

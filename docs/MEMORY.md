@@ -68,36 +68,47 @@ Release regression in `checkout-api`:
 - Live server startup verified: returns `{"status":"ok"}` from real FastAPI process
 - README complete with setup, migration, test, and Docker instructions
 
+### Phase 2 — Incident Simulator ✅ (2026-10-19)
+- Git branch: `feature/phase-2-incident-simulator`
+- Pure domain package built under `simulator/` with zero database or network dependencies
+- Strongly typed Pydantic models for services, deployments, telemetry, structured logs, dependencies, runbooks, and events
+- 4 deterministic simulated services: `checkout-service`, `payment-service`, `inventory-service`, `auth-service`
+- Deployment tracking: `checkout-v41`, `checkout-v42`, `payment-v18`, `inventory-v30`, `auth-v12`
+- Deterministic fault injection: `CHECKOUT_REGRESSION` activates `checkout-v42`, raises error rate to 18.4%, latency to 420ms, status to `DEGRADED`
+- Downstream dependencies (`payment-service`, `inventory-service`, `auth-service`) remain `HEALTHY` (<0.5% error rate) during failure
+- Structured logs provide diagnostic proof (`CHECKOUT_VALIDATION_REGRESSION` in `order_validator.py`)
+- Controlled domain rollback operation: rolls back `checkout-v42`, reinstates `checkout-v41`, recovers error rate to 0.70%, restores status to `HEALTHY`
+- Full audit event stream tracking all simulation transitions
+- Complete reset capability via `sim.reset()`
+- 26 simulator unit tests + 1 golden scenario end-to-end integration test (43/43 tests passing in 0.34s)
+- All Phase 1 tests pass intact; frontend build succeeds with zero errors
+
 ## Current File Being Worked On
 
-None — Phase 1 complete.
+None — Phase 2 complete.
 
 ## Next Task
 
-Phase 2 — Incident Simulator:
-- deterministic services (checkout-api, payment-api, etc.)
-- metric endpoints (error rate, latency)
-- simulated log queries
-- deployment history
-- fault injection
-- one-command reset
+Phase 3 — MCP Tool Layer:
+- Official MCP Python SDK server implementation
+- Expose read tools (`get_service_health`, `get_error_rate`, `query_logs`, `get_recent_deployments`, `get_dependency_health`, `get_runbook`)
+- Expose write tools (`rollback_deployment`, `restart_service`)
+- Strict input/output schema validation with Pydantic
+- Policy gating on write operations
 
 ## Decisions
 
 ### Decision: Use simulator-first execution
 Reason: deterministic judging and safety. Real production actions are out of scope.
 
-### Decision: MCP is a real runtime boundary
-Reason: Alexa+ requires genuine track technology use for the MCP path.
-
-### Decision: AI is not the policy engine
-Reason: nondeterministic model output must not directly determine consequential system actions.
-
-### Decision: Verification is mandatory
-Reason: an action being executed does not prove recovery.
+### Decision: In-memory simulation state over database tables
+Reason: Per Phase 2 architectural constraints, simulator state is purely deterministic, reproducible in-memory state. Storing ephemeral simulation counters in PostgreSQL would introduce needless coupling and migration churn without architectural benefit.
 
 ### Decision: Canonical documentation path standardized to docs/
 Reason: The canonical documentation path is standardized to `docs/` to match ARCHITECTURE.md and the master engineering prompt contract.
+
+### Decision: Strict identifier sanitization
+Reason: All service, deployment, and fault IDs validated against `^[a-zA-Z0-9_\-]+$` regex to prevent injection or arbitrary path traversal.
 
 ### Decision: Alembic over Base.metadata.create_all()
 Reason: RULES.md §6 mandates migrations. Schema changes must be traceable, reversible, and reproducible.
@@ -147,3 +158,11 @@ After every task record:
 - Live API startup verified.
 - Frontend production build verified.
 - No secrets hardcoded. No fake API responses. No Base.metadata.create_all().
+
+### 2026-10-19 — Phase 2
+- Implemented deterministic Incident Simulator on branch `feature/phase-2-incident-simulator`.
+- Created simulator domain models, exceptions, golden scenario definitions, and IncidentSimulator engine.
+- Implemented golden incident lifecycle: baseline healthy -> CHECKOUT_REGRESSION -> correlate -> rollback -> recovery -> reset.
+- Added 27 new tests (26 unit, 1 golden scenario e2e integration). All 43/43 tests pass in 0.34s.
+- Zero MCP, LLM, or cloud dependencies introduced.
+

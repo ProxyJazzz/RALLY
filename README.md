@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 1 — Foundation** ✅
+**Phase 2 — Incident Simulator** ✅
 
-PostgreSQL • FastAPI • React + Vite + Tailwind • Alembic migrations • Docker Compose • Structured logging • Health endpoints • Testing foundation
+Deterministic Microservice World Model • Telemetry & Structured Logs • Golden Incident Scenario • Checkout Regression Fault • Controlled Rollback & Deterministic Recovery • Full Simulation Audit Trail
 
 ---
 
@@ -180,18 +180,52 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests
+# Run all tests (43 unit & integration tests)
 python -m pytest tests/ -v
 
-# Unit tests only (no database required)
-python -m pytest tests/unit/ -v
+# Run Golden Incident Scenario test
+python -m pytest tests/integration/test_golden_scenario.py -v
 
-# Integration tests only
-python -m pytest tests/integration/ -v
+# Simulator unit tests
+python -m pytest tests/unit/test_simulator.py -v
+
+# API foundation unit tests
+python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py -v
+
+# API integration tests
+python -m pytest tests/integration/test_health_routes.py -v
 
 # With coverage
-python -m pytest tests/ --cov=app --cov-report=term-missing
+python -m pytest tests/ --cov=app --cov=simulator --cov-report=term-missing
 ```
+
+---
+
+## Incident Simulator (Phase 2)
+
+The RALLY Incident Simulator (`simulator/`) is an in-memory, deterministic operational world model that reproduces the canonical golden incident lifecycle:
+
+```text
+HEALTHY BASELINE (checkout-v41, error rate 0.67%)
+       │
+       ▼
+DEPLOY REGRESSION (checkout-v42 activated, error rate jumps to 18.4%)
+       │
+       ▼
+EVIDENCE CORRELATION (logs: CHECKOUT_VALIDATION_REGRESSION, dependencies healthy)
+       │
+       ▼
+CONTROLLED ROLLBACK (checkout-v42 rolled back, checkout-v41 reinstated)
+       │
+       ▼
+RECOVERY VERIFICATION (error rate drops to 0.70%, status returns to HEALTHY)
+```
+
+Key features:
+- **Zero random numbers, external APIs, or wall-clock dependencies**: all telemetry and log output is strictly reproducible.
+- **Strongly-typed domain models**: Pydantic models for services, deployments, diffs, metrics, logs, runbooks, and audit events.
+- **Dependency isolation**: Downstream dependencies (`payment-service`, `inventory-service`, `auth-service`) remain `HEALTHY` throughout failure, providing the exact signal an agent requires to isolate checkout as the primary suspect.
+- **Full reset support**: `sim.reset()` restores pristine baseline state for automated testing.
 
 ---
 
@@ -254,9 +288,22 @@ RALLY/
 │       │   ├── hooks/               ← React hooks
 │       │   └── App.tsx
 │       └── package.json
+├── simulator/                       ← Deterministic Incident Simulator
+│   ├── domain/                      ← Models & typed exceptions
+│   │   ├── models.py
+│   │   └── exceptions.py
+│   ├── scenarios/                   ← Golden scenario definitions & fixtures
+│   │   └── golden.py
+│   └── services/                    ← IncidentSimulator engine
+│       └── simulator.py
 ├── tests/
-│   ├── unit/                        ← Unit tests (no DB required)
-│   └── integration/                 ← API integration tests
+│   ├── unit/                        ← Unit tests (simulator + API)
+│   │   ├── test_config.py
+│   │   ├── test_health_service.py
+│   │   └── test_simulator.py
+│   └── integration/                 ← Integration tests
+│       ├── test_golden_scenario.py
+│       └── test_health_routes.py
 ├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
