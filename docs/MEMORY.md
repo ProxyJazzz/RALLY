@@ -83,23 +83,43 @@ Release regression in `checkout-api`:
 - 26 simulator unit tests + 1 golden scenario end-to-end integration test (43/43 tests passing in 0.34s)
 - All Phase 1 tests pass intact; frontend build succeeds with zero errors
 
+### Phase 3 — MCP Tool Layer ✅ (2026-10-19)
+- Git branch: `feature/phase-3-mcp-tool-layer`
+- Official MCP Python SDK integrated (`mcp 2.3.0`, `mcp-types 2.3.0`)
+- Built `rally_mcp` package using `mcp.server.mcpserver.MCPServer`
+- Streamable HTTP transport configured via Starlette (`create_rally_mcp_app()`, default `http://127.0.0.1:8001/mcp`)
+- 7 Read Tools exposed: `get_service_health`, `get_error_rate`, `query_logs`, `get_recent_deployments`, `get_deployment_diff`, `get_dependency_health`, `get_runbook`
+- 1 Write Tool exposed: `rollback_deployment` (invokes simulator domain rollback)
+- Deferred write tools (`create_incident`, `restart_service`, `scale_service`, `send_incident_update`, `close_incident`) omitted to avoid fake implementations
+- Forbidden tools strictly prevented (zero arbitrary code/shell/generic-HTTP execution)
+- Safe error mapping: domain exceptions converted to structured `MCPToolErrorResponse` without leaking internals
+- 13 new tests added (9 unit tests + 4 protocol integration tests)
+- 56/56 total tests passing in 1.27s (100% pass rate)
+- Golden scenario executed completely over real MCP protocol client session
+- Frontend build remains clean
+
 ## Current File Being Worked On
 
-None — Phase 2 complete.
+None — Phase 3 complete.
 
 ## Next Task
 
-Phase 3 — MCP Tool Layer:
-- Official MCP Python SDK server implementation
-- Expose read tools (`get_service_health`, `get_error_rate`, `query_logs`, `get_recent_deployments`, `get_dependency_health`, `get_runbook`)
-- Expose write tools (`rollback_deployment`, `restart_service`)
-- Strict input/output schema validation with Pydantic
-- Policy gating on write operations
+Phase 4 — Agentic Investigation:
+- Amazon Bedrock client integration / investigation agent
+- Intent interpretation and multi-step investigation loop using MCP read tools
+- Evidence gathering, hypothesis generation, and correlation
+- Diagnostic reasoning without hallucination
 
 ## Decisions
 
-### Decision: Use simulator-first execution
-Reason: deterministic judging and safety. Real production actions are out of scope.
+### Decision: Official MCP SDK package naming disambiguation
+Reason: Python package is `mcp`. To prevent local folder import collisions when running `import mcp`, the local MCP server adapter layer is located in package `rally_mcp/`.
+
+### Decision: Use MCPServer and Streamable HTTP in MCP 2.x
+Reason: `mcp>=2.0.0` uses `mcp.server.mcpserver.MCPServer` (FastMCP was renamed in 2.x) and supports Starlette ASGI apps for Streamable HTTP via `server.streamable_http_app()`.
+
+### Decision: Strict tool boundary and omission of placeholder write tools
+Reason: RULES.md and Phase 3 specifications forbid fake success responses. Write operations are limited strictly to verified capabilities supported by the domain layer (`rollback_deployment`).
 
 ### Decision: In-memory simulation state over database tables
 Reason: Per Phase 2 architectural constraints, simulator state is purely deterministic, reproducible in-memory state. Storing ephemeral simulation counters in PostgreSQL would introduce needless coupling and migration churn without architectural benefit.
@@ -165,4 +185,12 @@ After every task record:
 - Implemented golden incident lifecycle: baseline healthy -> CHECKOUT_REGRESSION -> correlate -> rollback -> recovery -> reset.
 - Added 27 new tests (26 unit, 1 golden scenario e2e integration). All 43/43 tests pass in 0.34s.
 - Zero MCP, LLM, or cloud dependencies introduced.
+
+### 2026-10-19 — Phase 3
+- Implemented official MCP Tool Layer on branch `feature/phase-3-mcp-tool-layer`.
+- Built `rally_mcp` server using official Python SDK (`mcp 2.3.0`) over Streamable HTTP transport.
+- Exposed 7 read investigation tools and 1 write rollback tool bound to `IncidentSimulator`.
+- Implemented safe error envelopes and strict schema validation.
+- Added 13 new tests (unit + protocol integration). All 56/56 tests pass in 1.27s.
+- Verified end-to-end golden incident scenario across live MCP client session.
 

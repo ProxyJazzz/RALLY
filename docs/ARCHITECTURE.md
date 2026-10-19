@@ -275,6 +275,51 @@ Phase 2 Scope:
 5. **Deterministic Recovery**: Error rate returns to 0.70% (<1.0% runbook threshold), latency normalizes to 88ms, and `checkout-service` returns to `HEALTHY`.
 6. **Audit Event Log**: All state transitions (`simulation_initialized`, `deployment_activated`, `fault_injected`, `service_health_changed`, `rollback_started`, `rollback_completed`) are appended to an immutable audit trail.
 
+## 8.2 MCP Tool Layer Architecture (Phase 3)
+
+The MCP layer (`rally_mcp/`) implements the Model Context Protocol using the official Python SDK (`mcp>=2.3.0`) over **Streamable HTTP** transport.
+
+```text
+┌──────────────────────┐
+│  MCP Client / Agent  │
+└──────────┬───────────┘
+           │ Streamable HTTP (JSON-RPC)
+           ▼
+┌──────────────────────┐
+│   RALLY MCP Server   │
+│  (rally_mcp/server)  │
+│  - Tool schemas      │
+│  - Input validation  │
+│  - Error mapping     │
+└──────────┬───────────┘
+           │ Domain method calls
+           ▼
+┌──────────────────────┐
+│ Incident Simulator   │
+│  (simulator/)        │
+└──────────────────────┘
+```
+
+### Protocol & SDK Specifications
+- **SDK**: Official `mcp` Python package (`mcp>=2.3.0`, specifically `mcp 2.3.0` / `mcp-types 2.3.0`).
+- **Server Class**: `mcp.server.mcpserver.MCPServer`
+- **Transport**: Streamable HTTP via `server.streamable_http_app()` running on Starlette / Uvicorn (default endpoint: `http://127.0.0.1:8001/mcp`).
+- **Capability Negotiation**: Standard MCP protocol initialization (`session.initialize()`) returning server identity `rally-mcp-server`.
+
+### Tool Surface
+- **Read Tools (7)**:
+  - `get_service_health(service_id: str)`: Returns operational status and active deployment.
+  - `get_error_rate(service_id: str)`: Returns deterministic error percentage and traffic counters.
+  - `query_logs(service_id: str, level: str | None, limit: int)`: Queries structured logs with level filter.
+  - `get_recent_deployments(service_id: str, limit: int)`: Returns recent deployment history.
+  - `get_deployment_diff(deployment_id: str)`: Returns code/config changes and risk level.
+  - `get_dependency_health(service_id: str)`: Returns downstream dependency health.
+  - `get_runbook(service_id: str)`: Returns incident remediation runbook and recovery threshold.
+- **Write Tools (1)**:
+  - `rollback_deployment(deployment_id: str)`: Executes controlled rollback in the simulator.
+- **Deferred Tools**: Speculative write operations (`create_incident`, `restart_service`, `scale_service`, `send_incident_update`, `close_incident`) are strictly omitted until downstream domain support is built.
+- **Security Invariant**: Strictly zero arbitrary code, shell, SQL, or generic HTTP execution tools. All tool inputs are validated and exceptions mapped into non-leaking JSON error envelopes.
+
 
 ## 9. Execution Contract
 

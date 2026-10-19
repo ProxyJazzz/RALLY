@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 2 — Incident Simulator** ✅
+**Phase 3 — MCP Tool Layer** ✅
 
-Deterministic Microservice World Model • Telemetry & Structured Logs • Golden Incident Scenario • Checkout Regression Fault • Controlled Rollback & Deterministic Recovery • Full Simulation Audit Trail
+Official MCP Python SDK (`mcp>=2.3.0`) • Streamable HTTP Transport • 7 Investigation Read Tools • 1 Controlled Rollback Write Tool • Strict Schema Validation & Error Envelope Mapping • Deterministic Protocol Integration Suite
 
 ---
 
@@ -180,24 +180,61 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests (43 unit & integration tests)
+# Run all tests (56 unit & protocol integration tests)
 python -m pytest tests/ -v
 
-# Run Golden Incident Scenario test
+# Run Golden Scenario executed over MCP protocol
+python -m pytest tests/integration/test_golden_mcp_scenario.py -v
+
+# Run MCP server protocol integration tests
+python -m pytest tests/integration/test_mcp_server.py -v
+
+# Run MCP unit tests
+python -m pytest tests/unit/test_mcp.py -v
+
+# Run Golden Incident Simulator test
 python -m pytest tests/integration/test_golden_scenario.py -v
 
 # Simulator unit tests
 python -m pytest tests/unit/test_simulator.py -v
 
-# API foundation unit tests
-python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py -v
-
-# API integration tests
-python -m pytest tests/integration/test_health_routes.py -v
+# API foundation unit & integration tests
+python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py tests/integration/test_health_routes.py -v
 
 # With coverage
-python -m pytest tests/ --cov=app --cov=simulator --cov-report=term-missing
+python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov-report=term-missing
 ```
+
+---
+
+## RALLY MCP Server (Phase 3)
+
+The RALLY MCP Server (`rally_mcp/`) implements the Model Context Protocol using the official Python SDK (`mcp>=2.3.0`) over **Streamable HTTP**. It acts as the capability boundary layer between future AI agents and operational systems.
+
+### Starting the MCP Server locally
+
+```bash
+source apps/api/.venv/bin/activate
+python -m rally_mcp.server
+```
+
+Server endpoints:
+- **Transport**: Streamable HTTP
+- **URL**: `http://127.0.0.1:8001/mcp`
+- **Protocol**: Model Context Protocol (MCP)
+
+### Exposed MCP Tools
+
+| Tool | Type | Description |
+|------|------|-------------|
+| `get_service_health` | Read | Returns operational status (HEALTHY, DEGRADED, FAILED) and active deployment |
+| `get_error_rate` | Read | Returns deterministic error rate percentage and request telemetry |
+| `query_logs` | Read | Queries structured operational logs filtered by service and level |
+| `get_recent_deployments` | Read | Returns reverse-chronological deployment history |
+| `get_deployment_diff` | Read | Returns code/configuration changes and risk rating for a deployment |
+| `get_dependency_health` | Read | Returns downstream service health to isolate regression causes |
+| `get_runbook` | Read | Returns documented rollback instructions and verified recovery thresholds |
+| `rollback_deployment` | Write | Executes a controlled rollback to the preceding stable deployment |
 
 ---
 
@@ -296,14 +333,25 @@ RALLY/
 │   │   └── golden.py
 │   └── services/                    ← IncidentSimulator engine
 │       └── simulator.py
+├── rally_mcp/                       ← Official Model Context Protocol Server
+│   ├── server.py                    ← MCP Server factory & Streamable HTTP app
+│   ├── runtime.py                   ← In-process background server runner
+│   ├── schemas.py                   ← Input & output Pydantic schemas
+│   ├── errors.py                    ← Safe error envelope mapping
+│   └── tools/                       ← Investigation & remediation tool definitions
+│       ├── read_tools.py            ← 7 operational read tools
+│       └── write_tools.py           ← 1 controlled rollback tool
 ├── tests/
-│   ├── unit/                        ← Unit tests (simulator + API)
+│   ├── unit/                        ← Unit tests (simulator + API + MCP)
 │   │   ├── test_config.py
 │   │   ├── test_health_service.py
-│   │   └── test_simulator.py
-│   └── integration/                 ← Integration tests
+│   │   ├── test_simulator.py
+│   │   └── test_mcp.py
+│   └── integration/                 ← Integration tests (API + MCP Protocol)
 │       ├── test_golden_scenario.py
-│       └── test_health_routes.py
+│       ├── test_golden_mcp_scenario.py
+│       ├── test_health_routes.py
+│       └── test_mcp_server.py
 ├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
