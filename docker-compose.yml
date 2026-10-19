@@ -1,0 +1,74 @@
+# ──────────────────────────────────────────────────────────────────────────
+# RALLY — Docker Compose (Local Development)
+# ──────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: rally_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rally
+      POSTGRES_PASSWORD: rally
+      POSTGRES_DB: rally
+    ports:
+      - "5432:5432"
+    volumes:
+      - rally_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rally -d rally"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Backend API ────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: rally_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://rally:rally@postgres:5432/rally
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Frontend ───────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: rally_web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+
+volumes:
+  rally_postgres_data:
+    driver: local
