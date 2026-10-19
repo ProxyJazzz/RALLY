@@ -374,6 +374,53 @@ Phase 4 introduces the first bounded reasoning and investigation agent (`agent/`
 - **Orchestrator (`agent/orchestrator.py`)**: Bounded investigation loop with strict limits (`max_tool_calls`, `max_iterations`, `timeout_seconds`). Produces structured reports and human-readable summaries.
 - **Action Boundary Invariant**: The agent recommends remediation (`rollback_deployment(checkout-v42)`), but its execution status remains strictly `NOT_EXECUTED` in Phase 4. Execution is deferred to human approval (Phase 5) and controlled verification (Phase 6).
 
+## 8.4 Planning + Governance Layer Architecture (Phase 5)
+
+Phase 5 introduces the deterministic governance boundary (`governance/`) that validates agent recommendations against hardcoded policy rules and risk matrices before requesting human authorization.
+
+```text
+┌────────────────────────────────────────────────────────┐
+│        Investigation Report (Recommended Action)       │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│            ActionPlanner (governance/planner)          │
+│                                                        │
+│  1. Map to ProposedAction (evidence IDs validated)     │
+│  2. RiskEngine.assess_risk()                           │
+│     - Blast radius, customer impact, reversibility     │
+│     - Deterministic classification: LOW/MED/HIGH/CRIT  │
+│  3. PolicyEngine.evaluate()                            │
+│     - RULE 1: Consequential actions → REQUIRES_APPROVAL│
+│     - RULE 2: Unsupported actions   → DENIED           │
+│     - RULE 3: Missing/invented IDs  → DENIED           │
+│     - RULE 4: Low confidence        → DENIED           │
+│  4. ConditionBuilder (Preconditions & Invalidations)   │
+│  5. ApprovalService.create_approval_request()          │
+│     - Status: AWAITING_APPROVAL                        │
+│     - Decision: PENDING                                │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│             Human Approval Gate (Human Role)           │
+│                                                        │
+│  ApprovalService.approve(approver="sre-lead@rally")    │
+│  - Status: APPROVED                                    │
+│  - INVARIANT: Execution status remains NOT_EXECUTED    │
+│  - Simulator remains untouched in Phase 5              │
+└────────────────────────────────────────────────────────┘
+```
+
+### Components
+- **Domain Models (`governance/models.py`)**: Strongly typed models for `ProposedAction`, `ActionPlan`, `RiskAssessment`, `PolicyDecision`, `Precondition`, `InvalidationCondition`, and `ApprovalRequest`.
+- **Policy Engine (`governance/policies.py`)**: Deterministic rules engine enforcing conservative invariants. Ignores prompt-level approval claims and ensures LLMs cannot override security policy.
+- **Risk Engine (`governance/risk.py`)**: Explainable, deterministic risk scoring (e.g. `checkout-service` rollback = `HIGH` risk with structured factors).
+- **Condition Evaluator (`governance/conditions.py`)**: Validates preconditions against operational state and invalidates plans if state diverges (e.g. active deployment changes).
+- **Approval Service (`governance/approval.py`)**: Formal human-in-the-loop lifecycle. Enforces that agents/LLMs cannot grant approval (`approver != "agent"`).
+- **No-Execution Invariant**: Under no circumstances does Phase 5 execute remediation or invoke write MCP tools. The operational simulator state remains strictly unmodified.
+
 
 ## 9. Execution Contract
 

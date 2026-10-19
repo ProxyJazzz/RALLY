@@ -114,19 +114,47 @@ Release regression in `checkout-api`:
 - 69/69 total tests passing in 1.84s (100% pass rate across entire repo)
 - Frontend build remains clean
 
+### Phase 5 — Planning + Governance ✅ (2026-10-19)
+- Git branch: `feature/phase-5-planning-governance`
+- Built deterministic governance layer in package `governance/`
+- Strongly typed Pydantic models for `ProposedAction`, `ActionPlan`, `RiskAssessment`, `PolicyDecision`, `Precondition`, `InvalidationCondition`, and `ApprovalRequest`
+- `PolicyEngine` enforces conservative deterministic rules:
+  - Consequential mutations (`rollback_deployment`) mandate human approval (`REQUIRES_APPROVAL`)
+  - Unsupported/deferred actions (`restart_service`, `scale_service`) are strictly `DENIED`
+  - Missing or fabricated evidence IDs are strictly `DENIED`
+  - Low-confidence actions on tier-1 services are strictly `DENIED`
+  - Untrusted approval text or prompt overrides are strictly ignored
+- `RiskEngine` calculates deterministic risk level (`HIGH` for checkout rollback) with explainable risk factors
+- `ConditionBuilder` & `ConditionEvaluator` construct and evaluate preconditions and invalidation triggers against operational state (e.g. stale deployment changes invalidate issued plans)
+- `ApprovalService` enforces explicit human approval lifecycle (`PENDING` -> `APPROVED` / `REJECTED` / `EXPIRED`) and forbids agent self-approval (`approver != "agent"`)
+- Mandatory Invariant strictly preserved: Phase 5 produces approval-ready plans, but NEVER executes remediation or invokes write MCP tools (`execution_status = "NOT_EXECUTED"`)
+- Operational simulator state remains completely untouched during planning and approval
+- Added 12 new tests (9 unit tests + 3 integration tests)
+- 81/81 total tests passing in 2.15s (100% pass rate across entire repo)
+- Frontend build remains clean
+
 ## Current File Being Worked On
 
-None — Phase 4 complete.
+None — Phase 5 complete.
 
 ## Next Task
 
-Phase 5 — Planning + Governance:
-- Action plan generation from investigation recommendations
-- Policy risk assessment engine (deterministic risk classification: LOW, MEDIUM, HIGH, CRITICAL)
-- Human-in-the-loop approval workflow (gating consequential actions like rollback)
-- Audit log persistence of approval events
+Phase 6 — Execution + Verification:
+- Controlled remediation execution of approved action plans
+- Execution engine invoking write MCP tools (`rollback_deployment`)
+- Independent verification engine verifying telemetry recovery below runbook threshold
+- Automated incident timeline and auditable resolution record generation
 
 ## Decisions
+
+### Decision: Strict No-Execution Invariant in Phase 5
+Reason: Architectural separation of concerns. Phase 5 is limited strictly to planning, policy assessment, risk evaluation, and human approval. Even after explicit human approval (`APPROVED`), remediation execution is deferred exclusively to Phase 6.
+
+### Decision: Agent self-approval prevention
+Reason: A model must never have authority to approve its own consequential recommendations. `ApprovalService` rejects any approval where `approver` is an agent or AI entity.
+
+### Decision: Strict evidence provenance requirement
+Reason: To eliminate hallucinated actions, `PolicyEngine` verifies that every evidence ID in `ProposedAction.evidence_ids` exists in the `GovernanceContext`. Any missing or fabricated ID causes deterministic denial.
 
 ### Decision: Remediation execution strictly prohibited in Phase 4
 Reason: Architectural separation of concerns. Phase 4 is limited to investigation and recommendation. Consequential actions (e.g. `rollback_deployment`) require policy checks and human approval (Phase 5) before controlled execution and recovery verification (Phase 6).
@@ -227,4 +255,14 @@ After every task record:
 - Verified golden incident investigation across live MCP Streamable HTTP transport.
 - Confirmed strict action boundary invariant (`execution_status = "NOT_EXECUTED"`).
 - Added 13 new tests (unit + protocol integration). All 69/69 tests pass in 1.84s.
+
+### 2026-10-19 — Phase 5
+- Implemented Planning + Governance Layer on branch `feature/phase-5-planning-governance`.
+- Created `governance/` package with `ActionPlanner`, `PolicyEngine`, `RiskEngine`, `ConditionEvaluator`, and `ApprovalService`.
+- Enforced deterministic policy decisions (REQUIRES_APPROVAL for rollback, DENIED for unsupported or low-confidence actions).
+- Implemented human-in-the-loop approval workflow; agent self-approval is actively blocked.
+- Evaluated preconditions and invalidation triggers against operational state.
+- Strictly preserved the No-Execution Invariant: `execution_status = "NOT_EXECUTED"` across planning and approval.
+- Added 12 new tests (unit + integration). All 81/81 tests pass in 2.15s.
+
 

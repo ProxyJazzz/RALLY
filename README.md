@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 4 — Agentic Investigation** ✅
+**Phase 5 — Planning + Governance** ✅
 
-Bounded Investigation Agent • Model Context Protocol Client • Evidence Ledger with Provenance • Hypothesis Formulation & Alternative Ranking • Strict Tool Allowlist & Remediation Execution Boundary (`NOT_EXECUTED`) • Prompt Injection Defense
+Deterministic Policy Engine (`ALLOWED`, `DENIED`, `REQUIRES_APPROVAL`) • Explainable Risk Engine (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) • Precondition & Invalidation Condition Validation • Formal Human Approval Lifecycle (`PENDING`, `APPROVED`, `REJECTED`, `EXPIRED`) • Strict Action Boundary (`execution_status = "NOT_EXECUTED"`) • Agent Self-Approval & Policy Bypass Defenses
 
 ---
 
@@ -180,8 +180,14 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests (69 unit & protocol integration tests across all phases)
+# Run all tests (81 unit & protocol integration tests across all phases)
 python -m pytest tests/ -v
+
+# Run Phase 5 Golden Governance integration tests (No-execution invariant & policy bypass)
+python -m pytest tests/integration/test_golden_governance.py -v
+
+# Run Phase 5 Governance unit tests (policy engine, risk matrix, approval lifecycle, conditions)
+python -m pytest tests/unit/test_governance.py -v
 
 # Run Golden Agent Investigation test (full MCP-backed cycle)
 python -m pytest tests/integration/test_agent_investigation.py -v
@@ -208,7 +214,52 @@ python -m pytest tests/unit/test_simulator.py -v
 python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py tests/integration/test_health_routes.py -v
 
 # With coverage
-python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov-report=term-missing
+python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov=governance --cov-report=term-missing
+```
+
+---
+
+## Planning + Governance (Phase 5)
+
+The Planning + Governance subsystem (`governance/`) implements a deterministic gate between agent recommendations and consequential execution:
+
+```text
+InvestigationReport (Phase 4)
+             │
+             ▼
+       ActionPlanner
+             ├── Evidence Provenance Check (Rejects invented IDs)
+             ├── Target Resource Exists Check
+             └── Action Schema Validation
+             │
+             ▼
+     Deterministic PolicyEngine
+             ├── Rule 1: Consequential actions -> REQUIRES_APPROVAL
+             ├── Rule 2: Unsupported actions -> DENIED
+             ├── Rule 3: Missing/invented evidence -> DENIED
+             ├── Rule 4: Low confidence -> DENIED / elevated risk
+             └── Rule 5: Stale operational state -> INVALIDATED
+             │
+             ▼
+     Explainable RiskEngine
+             ├── Blast radius & customer-facing impact (checkout-service: HIGH)
+             ├── Service dependency depth
+             └── Action reversibility & evidence confidence
+             │
+             ▼
+ConditionBuilder & ConditionEvaluator
+             ├── Preconditions (e.g., active deployment == checkout-v42)
+             └── Invalidation conditions (e.g., deployment rolled back, independent resolution)
+             │
+             ▼
+       ApprovalService
+             ├── PENDING -> APPROVED / REJECTED / EXPIRED
+             ├── Explicit actor role verification (ActorType.HUMAN only; agents forbidden)
+             └── Immutable audit event log (PLAN_CREATED, APPROVAL_REQUESTED, etc.)
+             │
+             ▼
+       NO-EXECUTION BOUNDARY
+(Plan status: AWAITING_APPROVAL/APPROVED; execution_status: NOT_EXECUTED; zero simulator mutations)
 ```
 
 ---
@@ -391,19 +442,29 @@ RALLY/
 │   ├── providers.py                 ← LLMProvider interface & Deterministic provider
 │   ├── orchestrator.py              ← Bounded investigation loop orchestrator
 │   └── reports.py                   ← Report formatting utilities
+├── governance/                      ← Deterministic Planning & Governance
+│   ├── models.py                    ← ActionPlan, ProposedAction, RiskAssessment schemas
+│   ├── policies.py                  ← Deterministic PolicyEngine (5 rules)
+│   ├── risk.py                      ← Explainable RiskEngine (multi-factor matrix)
+│   ├── approval.py                  ← ApprovalService (human-only approval lifecycle)
+│   ├── conditions.py                ← Precondition & invalidation evaluation
+│   ├── planner.py                   ← ActionPlanner recommendation-to-plan workflow
+│   └── exceptions.py                ← Domain exceptions
 ├── tests/
-│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent)
+│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent + Governance)
 │   │   ├── test_config.py
 │   │   ├── test_health_service.py
 │   │   ├── test_simulator.py
 │   │   ├── test_mcp.py
-│   │   └── test_agent.py
-│   └── integration/                 ← Integration tests (API + MCP + Agent)
+│   │   ├── test_agent.py
+│   │   └── test_governance.py
+│   └── integration/                 ← Integration tests (API + MCP + Agent + Governance)
 │       ├── test_golden_scenario.py
 │       ├── test_golden_mcp_scenario.py
 │       ├── test_health_routes.py
 │       ├── test_mcp_server.py
-│       └── test_agent_investigation.py
+│       ├── test_agent_investigation.py
+│       └── test_golden_governance.py
 ├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
