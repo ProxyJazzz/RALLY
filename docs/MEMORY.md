@@ -131,21 +131,55 @@ Release regression in `checkout-api`:
 - Operational simulator state remains completely untouched during planning and approval
 - Added 12 new tests (9 unit tests + 3 integration tests)
 - 81/81 total tests passing in 2.15s (100% pass rate across entire repo)
+### Phase 6 — Execution + Verification ✅ (2026-10-19)
+- Git branch: `feature/phase-6-execution-verification`
+- Built execution and independent verification subsystem in package `execution/`
+- Strongly typed Pydantic models for `ExecutionRecord`, `VerificationReport`, `VerificationCheck`, and `ControlledExecutionResult`
+- `PreconditionRevalidator` enforces pre-execution TOCTOU checks:
+  - Enforces plan is in `APPROVED` status with valid human approval decision
+  - Checks approval window has not expired
+  - Live query of operational state over MCP to ensure active deployment matches expected target
+  - Verifies downstream dependencies remain healthy
+  - Detects if incident was resolved independently, aborting execution if already healthy
+- `ControlledExecutor` invokes MCP write tool (`rollback_deployment`) exclusively over Streamable HTTP protocol:
+  - Enforces single-execution idempotency key (`exec-{plan_id}-{action_type}`)
+  - Tracks execution latency and records structured `ExecutionRecord`
+- `IndependentVerifier` evaluates recovery using separate read-only MCP tool queries:
+  - Re-checks service health (`get_service_health`) -> `HEALTHY`
+  - Re-checks error rate (`get_error_rate`) -> 0.70% (< 1.0% runbook threshold)
+  - Confirms active deployment restoration -> `checkout-v41`
+  - Inspects downstream dependencies (`get_dependency_health`) -> `HEALTHY`
+  - Inspects operational logs (`query_logs`) -> clean recovery logs
+- `ExecutionOrchestrator` coordinates the full `revalidate -> execute -> record -> verify -> decide` pipeline
+- Deliberately supports and tests both outcomes:
+  - Happy Path: Rollback succeeds + verification passes -> `RecoveryDecision.RESOLVED`
+  - Failure Path: Rollback succeeds, but verification fails (strict threshold) -> `RecoveryDecision.RECOVERY_FAILED` -> escalates to `NEEDS_HUMAN`
+  - TOCTOU Block Path: Stale deployment state triggers pre-execution block -> `RecoveryDecision.EXECUTION_BLOCKED`
+- Added 9 new tests (6 unit tests + 3 integration tests)
+- 90/90 total tests passing in 2.52s (100% pass rate across entire repo)
 - Frontend build remains clean
 
 ## Current File Being Worked On
 
-None — Phase 5 complete.
+None — Phase 6 complete.
 
 ## Next Task
 
-Phase 6 — Execution + Verification:
-- Controlled remediation execution of approved action plans
-- Execution engine invoking write MCP tools (`rollback_deployment`)
-- Independent verification engine verifying telemetry recovery below runbook threshold
-- Automated incident timeline and auditable resolution record generation
+Phase 7 — AWS Builder Integration:
+- Amazon Bedrock model inference integration
+- Documented AWS configuration and fallback handling
+- Product Feedback documentation on AWS services
 
 ## Decisions
+
+### Decision: Strict Separation of Execution and Verification
+Reason: The core reliability architectural principle dictates: "The same action that changes system state cannot be its own proof that recovery succeeded." Controlled execution and independent verification are decoupled into distinct engines. Execution records the mutation, while independent verification performs subsequent read-only telemetry queries to establish ground truth recovery.
+
+### Decision: Immediate Pre-Execution Revalidation (TOCTOU Defense)
+Reason: Approval must never mean "execute blindly." Operational states can shift between human approval and execution. `PreconditionRevalidator` queries live state immediately before write tool invocation to guarantee active deployment, dependency health, and valid approval before mutating the system.
+
+### Decision: Explicit Failure Path Modeling (RECOVERY_FAILED -> NEEDS_HUMAN)
+Reason: Real operations often encounter remediations that fail to restore health (e.g. underlying database corruption, partial rollbacks). Testing and modeling `RECOVERY_FAILED` provides realistic reliability architecture rather than a naive happy-path demo.
 
 ### Decision: Strict No-Execution Invariant in Phase 5
 Reason: Architectural separation of concerns. Phase 5 is limited strictly to planning, policy assessment, risk evaluation, and human approval. Even after explicit human approval (`APPROVED`), remediation execution is deferred exclusively to Phase 6.

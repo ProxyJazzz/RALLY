@@ -421,6 +421,71 @@ Phase 5 introduces the deterministic governance boundary (`governance/`) that va
 - **Approval Service (`governance/approval.py`)**: Formal human-in-the-loop lifecycle. Enforces that agents/LLMs cannot grant approval (`approver != "agent"`).
 - **No-Execution Invariant**: Under no circumstances does Phase 5 execute remediation or invoke write MCP tools. The operational simulator state remains strictly unmodified.
 
+### 8.5 Execution + Verification Architecture (Phase 6)
+
+Phase 6 implements the controlled execution and independent verification subsystem (`execution/`). It strictly separates state mutation from verification:
+
+```text
+┌────────────────────────────────────────────────────────┐
+│             Approved ActionPlan (Phase 5)              │
+│       (Status: APPROVED, Human Approval Granted)       │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│     PreconditionRevalidator (execution/revalidator)    │
+│                                                        │
+│  1. Check plan.status == APPROVED                      │
+│  2. Check plan.approval.decision == APPROVED           │
+│  3. Check approval not expired                         │
+│  4. Query live operational state via MCP               │
+│  5. TOCTOU Defense: revalidate preconditions           │
+│     - active_deployment_id == checkout-v42             │
+│     - downstream dependencies == HEALTHY               │
+│     - incident not resolved independently              │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Passed
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│         ControlledExecutor (execution/executor)        │
+│                                                        │
+│  1. Idempotency enforcement (plan_id + action_type)    │
+│  2. Controlled MCP write call: rollback_deployment     │
+│  3. Generate immutable ExecutionRecord                 │
+│     - Status: EXECUTED                                 │
+│     - Latency / duration tracking                      │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│        IndependentVerifier (execution/verifier)        │
+│                                                        │
+│  Separate Read-Only MCP Tool Inspections:              │
+│  - get_service_health (Status: HEALTHY, Active: v41)   │
+│  - get_error_rate (0.70% < 1.0% threshold)             │
+│  - get_dependency_health (payment, inventory, auth)    │
+│  - query_logs (clean recovery logs)                    │
+│                                                        │
+│  Evaluation:                                           │
+│  - All checks passed → VerificationStatus: PASSED      │
+│  - Any check failed  → VerificationStatus: FAILED      │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│             Lifecycle Recovery Decision                │
+│                                                        │
+│  - PASSED → RESOLVED (Incident status: RESOLVED)       │
+│  - FAILED → RECOVERY_FAILED (Status: NEEDS_HUMAN)      │
+│  - BLOCKED → EXECUTION_BLOCKED                         │
+└────────────────────────────────────────────────────────┘
+```
+
+### Components
+- **PreconditionRevalidator (`execution/revalidator.py`)**: Immediate pre-execution verification preventing Time-Of-Check to Time-Of-Use (TOCTOU) issues or execution of stale/expired plans.
+- **ControlledExecutor (`execution/executor.py`)**: Enforces single-execution idempotency and calls the MCP write tool over Streamable HTTP protocol.
+- **IndependentVerifier (`execution/verifier.py`)**: Read-only verification engine querying health, error rate, dependencies, and logs. Operates under the principle: *The same action that changes system state cannot be its own proof that recovery succeeded.*
+- **ExecutionOrchestrator (`execution/orchestrator.py`)**: Coordinates the complete `revalidate -> execute -> record -> verify -> decide` pipeline.
 
 ## 9. Execution Contract
 

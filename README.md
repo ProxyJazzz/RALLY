@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 5 — Planning + Governance** ✅
+**Phase 6 — Execution + Verification** ✅
 
-Deterministic Policy Engine (`ALLOWED`, `DENIED`, `REQUIRES_APPROVAL`) • Explainable Risk Engine (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) • Precondition & Invalidation Condition Validation • Formal Human Approval Lifecycle (`PENDING`, `APPROVED`, `REJECTED`, `EXPIRED`) • Strict Action Boundary (`execution_status = "NOT_EXECUTED"`) • Agent Self-Approval & Policy Bypass Defenses
+Controlled MCP Writes (`rollback_deployment`) • Immediate Pre-Execution Precondition Revalidation (TOCTOU Defense) • Single-Execution Idempotency • Execution Duration Tracking • Independent Multi-Check Verification (`get_service_health`, `get_error_rate`, `get_dependency_health`, `query_logs`) • Explicit Recovery Decision State Machine (`RESOLVED`, `RECOVERY_FAILED`, `NEEDS_HUMAN`, `EXECUTION_BLOCKED`)
 
 ---
 
@@ -180,8 +180,14 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests (81 unit & protocol integration tests across all phases)
+# Run all tests (90 unit & protocol integration tests across all phases)
 python -m pytest tests/ -v
+
+# Run Phase 6 Golden Execution and Verification integration tests
+python -m pytest tests/integration/test_golden_execution.py -v
+
+# Run Phase 6 Execution unit tests (revalidation, TOCTOU protection, unapproved plan blocks)
+python -m pytest tests/unit/test_execution.py -v
 
 # Run Phase 5 Golden Governance integration tests (No-execution invariant & policy bypass)
 python -m pytest tests/integration/test_golden_governance.py -v
@@ -214,7 +220,42 @@ python -m pytest tests/unit/test_simulator.py -v
 python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py tests/integration/test_health_routes.py -v
 
 # With coverage
-python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov=governance --cov-report=term-missing
+python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov=governance --cov=execution --cov-report=term-missing
+```
+
+---
+
+## Controlled Execution & Independent Verification (Phase 6)
+
+The Execution + Verification subsystem (`execution/`) enforces controlled mutation and independent proof:
+
+```text
+Approved ActionPlan (Phase 5)
+             │
+             ▼
+PreconditionRevalidator (Immediate TOCTOU Protection)
+             ├── Approval state & expiration validation
+             └── Live operational revalidation (active deployment & dependency check)
+             │
+             ▼ (Passed)
+ControlledExecutor (Single-Execution Idempotency)
+             └── MCP write tool call: rollback_deployment(checkout-v42)
+             │
+             ▼
+ExecutionRecord Created (Status: EXECUTED, Latency Tracking)
+             │
+             ▼
+IndependentVerifier (Separate Read-Only MCP Queries)
+             ├── get_service_health (Status: HEALTHY, Active: checkout-v41)
+             ├── get_error_rate (~0.70% < 1.0% runbook threshold)
+             ├── get_dependency_health (downstream dependencies all healthy)
+             └── query_logs (clean recovery log trail)
+             │
+             ▼
+Recovery Decision & State Machine
+             ├── Verification PASSED  -> Incident RESOLVED
+             ├── Verification FAILED  -> Incident RECOVERY_FAILED -> Escalate to NEEDS_HUMAN
+             └── Precondition FAILED  -> Incident EXECUTION_BLOCKED
 ```
 
 ---
@@ -450,21 +491,30 @@ RALLY/
 │   ├── conditions.py                ← Precondition & invalidation evaluation
 │   ├── planner.py                   ← ActionPlanner recommendation-to-plan workflow
 │   └── exceptions.py                ← Domain exceptions
+├── execution/                       ← Controlled Execution & Verification
+│   ├── models.py                    ← ExecutionRecord, VerificationReport, ControlledExecutionResult
+│   ├── revalidator.py               ← PreconditionRevalidator (TOCTOU defense)
+│   ├── executor.py                  ← ControlledExecutor (MCP writes & idempotency)
+│   ├── verifier.py                  ← IndependentVerifier (separate read-only checks)
+│   ├── orchestrator.py              ← ExecutionOrchestrator pipeline
+│   └── exceptions.py                ← Domain exceptions
 ├── tests/
-│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent + Governance)
+│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent + Governance + Execution)
 │   │   ├── test_config.py
 │   │   ├── test_health_service.py
 │   │   ├── test_simulator.py
 │   │   ├── test_mcp.py
 │   │   ├── test_agent.py
-│   │   └── test_governance.py
-│   └── integration/                 ← Integration tests (API + MCP + Agent + Governance)
+│   │   ├── test_governance.py
+│   │   └── test_execution.py
+│   └── integration/                 ← Integration tests (API + MCP + Agent + Governance + Execution)
 │       ├── test_golden_scenario.py
 │       ├── test_golden_mcp_scenario.py
 │       ├── test_health_routes.py
 │       ├── test_mcp_server.py
 │       ├── test_agent_investigation.py
-│       └── test_golden_governance.py
+│       ├── test_golden_governance.py
+│       └── test_golden_execution.py
 ├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
