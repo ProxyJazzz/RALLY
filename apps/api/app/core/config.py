@@ -37,5 +37,14 @@ class Settings(BaseSettings):
     # ── CORS ─────────────────────────────────────────────────────────────────
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # ── AWS / Bedrock (Phase 7) ──────────────────────────────────────────────
+    aws_region: str | None = None
+    aws_default_region: str | None = None
+    bedrock_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    bedrock_max_tokens: int = 4096
+    bedrock_timeout_seconds: float = 30.0
+    bedrock_max_retries: int = 2
+    run_aws_integration_tests: bool = False
+
 
 settings = Settings()

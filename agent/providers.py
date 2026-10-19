@@ -33,6 +33,12 @@ class LLMToolSelection(BaseModel):
 class LLMProvider(ABC):
     """Abstract interface for LLM / AI reasoning providers."""
 
+    @property
+    @abstractmethod
+    def provider_name(self) -> str:
+        """Name of the provider (e.g. 'deterministic', 'bedrock', 'strands-bedrock')."""
+        pass
+
     @abstractmethod
     async def select_next_action(
         self,
@@ -60,6 +66,10 @@ class DeterministicInvestigationProvider(LLMProvider):
     Analyzes evidence recorded through real MCP calls and correlates telemetry,
     logs, deployments, and dependency health without any external API dependencies.
     """
+
+    @property
+    def provider_name(self) -> str:
+        return "deterministic"
 
     async def select_next_action(
         self,

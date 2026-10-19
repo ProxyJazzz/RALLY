@@ -160,5 +160,7 @@ class InvestigationReport(BaseModel):
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
     recommended_action: RecommendedAction | None = None
     execution_status: str = "NOT_EXECUTED"
+    reasoning_provider: str = "deterministic"
+    orchestrator_type: str = "rally-orchestrator"
     limitations: list[str] = Field(default_factory=list)
     human_readable: str = ""

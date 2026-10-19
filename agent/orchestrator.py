@@ -250,6 +250,8 @@ class InvestigationOrchestrator:
             confidence=final_primary.confidence if final_primary else ConfidenceLevel.LOW,
             recommended_action=recommendation,
             execution_status="NOT_EXECUTED",  # Strict invariant
+            reasoning_provider=getattr(self.provider, "provider_name", "deterministic"),
+            orchestrator_type="rally-orchestrator",
             limitations=limitations,
         )
 
