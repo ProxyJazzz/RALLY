@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 7 — AWS Builder Integration** ✅
+**Phase 8 — Alexa+ MCP Integration** ✅
 
-Amazon Bedrock Reasoning (`converse` API, Claude 3.5 Sonnet) • Strands Agentic Investigation Pattern • Provider Abstraction (`DeterministicInvestigationProvider` vs. `BedrockInvestigationProvider`) • Strict Evidence Provenance Validation (Rejection of Invented Evidence IDs) • Bounded Token Limits & Retries • Prompt Injection Structural Isolation • Structured AWS Observability Audit Events
+Self-Hosted Streamable HTTP MCP Server (MCP Spec 2025-11-25) • 13 Typed Tools (8 Operational + 5 Conversational) • Authoritative Multi-Turn Incident Context (`alexa/`) • Conversational Workflow with Deterministic Governance Gate • Prompt Injection Hardening • Remote Cloudflare Tunnel / Public HTTPS Deployment • Sub-500ms Read Tool Latency (<10ms local avg)
 
 ---
 
@@ -247,6 +247,68 @@ To run RALLY with live Amazon Bedrock foundation models:
    RUN_AWS_INTEGRATION_TESTS=true python -m pytest tests/integration/test_aws_bedrock.py -k test_live_bedrock_integration -v
    ```
 5. **Offline Mode**: If credentials are not present, RALLY automatically uses `DeterministicInvestigationProvider`, ensuring 100% test reproducibility with zero cloud dependencies.
+
+---
+
+## Alexa+ Integration (Phase 8)
+
+RALLY integrates with **Alexa+** as an authoritative, voice/conversational incident response system over the Model Context Protocol (MCP):
+
+```text
+Alexa+ (Voice/Conversational Surface)
+             │
+             ▼ (Streamable HTTP, MCP spec 2025-11-25)
+   RALLY MCP Server Layer (:8001/mcp)
+             ├── 8 Base Operational Tools (Health, Logs, Deployments, Diffs, Runbooks)
+             └── 5 Alexa Incident Tools (get_incident_context, get_investigation_summary, ...)
+             │
+             ▼
+   Authoritative Incident Context (`alexa/`)
+             │
+             ▼
+   RALLY Orchestration Engine
+   ├── Investigation Agent & Evidence Ledger (Bedrock / Strands)
+   ├── Policy & Risk Engine (Deterministic Governance)
+   ├── Human Approval Gate (Out-of-band SRE Authorization)
+   ├── ControlledExecutor (Revalidation + Idempotency)
+   └── Independent Verification Engine (Deterministic recovery confirmation)
+```
+
+### Key Conversational Flow & Safety Rules
+- **Multi-Turn Continuity**: Alexa+ asks for findings, code diffs, recommendations, execution status, and verification without re-running long investigations redundantly.
+- **Strict Human Approval Gate**: Utterances like *"Roll it back"* or *"Approve the action"* do NOT trigger execution. RALLY returns `NOT_EXECUTED` (approval required) until verified SRE authorization is registered.
+- **Independent Verification**: RALLY only declares `RESOLVED` when independent read-only telemetry queries verify that error rates have dropped below thresholds (e.g., 0.70% < 1.0%).
+
+### Setup & Local Testing
+
+```bash
+# 1. Run Alexa+ unit tests
+source apps/api/.venv/bin/activate
+python -m pytest tests/unit/test_alexa.py -v
+
+# 2. Run Alexa+ integration tests (multi-turn lifecycle, prompt injection, latency benchmark)
+python -m pytest tests/integration/test_alexa_mcp.py -v
+```
+
+### Public HTTPS & Alexa AI CLI Deployment
+
+1. **Start Local MCP Server**:
+   ```bash
+   python -m rally_mcp.server --host 127.0.0.1 --port 8001
+   ```
+2. **Expose via Cloudflare Tunnel**:
+   ```bash
+   cloudflared tunnel --url http://127.0.0.1:8001
+   ```
+3. **Register MCP Add-on with Alexa AI CLI**:
+   ```bash
+   alexa-ai addon create rally \
+     --endpoint "https://<your-tunnel-id>.trycloudflare.com/mcp" \
+     --transport streamable-http \
+     --description "RALLY: Evidence-backed automated incident investigation and reliability orchestration."
+   ```
+
+For detailed specifications, OAuth 2.1 authentication contracts, and security models, see [`docs/ALEXA_PLUS.md`](docs/ALEXA_PLUS.md).
 
 ---
 

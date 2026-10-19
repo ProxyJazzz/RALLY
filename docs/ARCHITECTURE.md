@@ -574,6 +574,34 @@ Database state, policy decisions, tool contracts, approvals, and verification re
 
 ## 12. Hackathon Runtime Strategy
 
-The Alexa+ implementation will use a self-hosted MCP server over Streamable HTTP, satisfying the primary track's required technology. The official rules specify MCP 2025-11-25 minimum and Streamable HTTP for the working MCP path. fileciteturn1file0L57-L64
+The Alexa+ implementation uses a self-hosted MCP server over Streamable HTTP, satisfying the primary track's required technology. The official rules specify MCP 2025-11-25 minimum and Streamable HTTP for the working MCP path.
 
-The system will also expose a web command center so judges can clearly observe the agentic workflow. The repo must demonstrate the track technology at runtime rather than merely mentioning it in documentation. fileciteturn1file0L57-L63
+The system also exposes a web command center so judges can clearly observe the agentic workflow. The repo demonstrates the track technology at runtime rather than merely mentioning it in documentation.
+
+## 13. Alexa+ MCP Architecture (Phase 8)
+
+Alexa+ acts as a voice/conversational external client over the standard Streamable HTTP MCP server:
+
+```text
+Alexa+ (Voice/Conversational Surface)
+    │
+    ▼ (Streamable HTTP, MCP spec 2025-11-25)
+RALLY MCP Server (Starlette / StreamableHTTPTransport)
+    │
+    ├─► alexa.context.IncidentContextManager (Authoritative Incident State)
+    ├─► Base Operational Tools (Read telemetry, logs, diffs, runbooks)
+    └─► Alexa Conversational Tools (get_incident_context, get_investigation_summary, ...)
+            │
+            ▼
+      RALLY Engine
+      - Investigation Agent & Evidence Ledger
+      - Policy & Risk Engine (Deterministic Governance)
+      - SRE Human Approval Gate (Out-of-band authorization required)
+      - ControlledExecutor (Revalidation + Idempotency)
+      - Independent Verification Engine (Authoritative recovery decision)
+```
+
+### Architectural Safeguards
+1. **External Untrusted Client**: Alexa+ conversation history is external and transient. Authoritative incident state is stored in `alexa.context.IncidentContextManager` and domain models.
+2. **Conversational Invalidation of Direct Action**: Conversational prompts like *"Roll it back"* or *"Approve the plan"* never trigger execution directly. Consequential writes remain locked behind verified SRE human approval.
+3. **Independent Recovery Decision**: Alexa+ can only report `RESOLVED` if `IndependentVerifier` deterministically validates that live telemetry has returned to healthy thresholds.
