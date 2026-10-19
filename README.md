@@ -257,7 +257,7 @@ RALLY/
 ├── tests/
 │   ├── unit/                        ← Unit tests (no DB required)
 │   └── integration/                 ← API integration tests
-├── RALLY_Docs/                      ← Project documentation
+├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
 │   ├── RULES.md
@@ -277,12 +277,12 @@ RALLY/
 
 | Document | Description |
 |----------|-------------|
-| [PRD](RALLY_Docs/PRD.md) | Product requirements |
-| [Architecture](RALLY_Docs/ARCHITECTURE.md) | System design |
-| [Phases](RALLY_Docs/PHASES.md) | Development roadmap |
-| [Rules](RALLY_Docs/RULES.md) | Engineering constraints |
-| [Design](RALLY_Docs/DESIGN.md) | UI/UX design system |
-| [Memory](RALLY_Docs/MEMORY.md) | Working implementation log |
+| [PRD](docs/PRD.md) | Product requirements |
+| [Architecture](docs/ARCHITECTURE.md) | System design |
+| [Phases](docs/PHASES.md) | Development roadmap |
+| [Rules](docs/RULES.md) | Engineering constraints |
+| [Design](docs/DESIGN.md) | UI/UX design system |
+| [Memory](docs/MEMORY.md) | Working implementation log |
 
 ---
 

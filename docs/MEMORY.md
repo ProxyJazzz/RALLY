@@ -96,8 +96,8 @@ Reason: nondeterministic model output must not directly determine consequential 
 ### Decision: Verification is mandatory
 Reason: an action being executed does not prove recovery.
 
-### Decision: docs/ folder → RALLY_Docs/
-Reason: repository was initialized with RALLY_Docs/ by the team before Phase 1. Architecture.md references `docs/` — this is a known naming discrepancy to be resolved at hardening phase.
+### Decision: Canonical documentation path standardized to docs/
+Reason: The canonical documentation path is standardized to `docs/` to match ARCHITECTURE.md and the master engineering prompt contract.
 
 ### Decision: Alembic over Base.metadata.create_all()
 Reason: RULES.md §6 mandates migrations. Schema changes must be traceable, reversible, and reproducible.
@@ -112,7 +112,6 @@ Reason: SQLAlchemy async extension requires greenlet. Added to pip install list;
 - Exact Strands/AgentCore integration after compatibility testing.
 - Final Alexa+ testing path.
 - Whether a meaningful Open Source contribution can be completed before submission.
-- Whether to rename `RALLY_Docs/` to `docs/` for alignment with ARCHITECTURE.md.
 
 ## Vibe Coding Protocol
 
