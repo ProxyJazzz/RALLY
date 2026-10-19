@@ -1,0 +1,85 @@
+# ──────────────────────────────────────────────
+# RALLY — .gitignore
+# ──────────────────────────────────────────────
+
+# ── Environment & secrets ───────────────────────
+.env
+.env.local
+.env.*.local
+*.secret
+*.key
+
+# ── Python ──────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.tox/
+.venv/
+venv/
+env/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+nosetests.xml
+.hypothesis/
+
+# ── Node / Frontend ─────────────────────────────
+node_modules/
+.output/
+.nuxt/
+.next/
+.cache/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Vite ────────────────────────────────────────
+apps/web/dist/
+apps/web/.vite/
+
+# ── Database ────────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+
+# ── Docker ──────────────────────────────────────
+.docker/
+
+# ── OS ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── IDE ─────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.iml
+
+# ── Logs ────────────────────────────────────────
+logs/
+*.log
+
+# ── Temporary ───────────────────────────────────
+tmp/
+temp/
