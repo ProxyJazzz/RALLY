@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 3 — MCP Tool Layer** ✅
+**Phase 4 — Agentic Investigation** ✅
 
-Official MCP Python SDK (`mcp>=2.3.0`) • Streamable HTTP Transport • 7 Investigation Read Tools • 1 Controlled Rollback Write Tool • Strict Schema Validation & Error Envelope Mapping • Deterministic Protocol Integration Suite
+Bounded Investigation Agent • Model Context Protocol Client • Evidence Ledger with Provenance • Hypothesis Formulation & Alternative Ranking • Strict Tool Allowlist & Remediation Execution Boundary (`NOT_EXECUTED`) • Prompt Injection Defense
 
 ---
 
@@ -180,8 +180,14 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests (56 unit & protocol integration tests)
+# Run all tests (69 unit & protocol integration tests across all phases)
 python -m pytest tests/ -v
+
+# Run Golden Agent Investigation test (full MCP-backed cycle)
+python -m pytest tests/integration/test_agent_investigation.py -v
+
+# Run Agent unit tests (policies, evidence ledger, hypotheses)
+python -m pytest tests/unit/test_agent.py -v
 
 # Run Golden Scenario executed over MCP protocol
 python -m pytest tests/integration/test_golden_mcp_scenario.py -v
@@ -202,8 +208,43 @@ python -m pytest tests/unit/test_simulator.py -v
 python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py tests/integration/test_health_routes.py -v
 
 # With coverage
-python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov-report=term-missing
+python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov-report=term-missing
 ```
+
+---
+
+## Agentic Investigation (Phase 4)
+
+The RALLY Investigation Agent (`agent/`) operates as a bounded reasoning loop that investigates production anomalies exclusively through the Model Context Protocol.
+
+```text
+RECEIVE INCIDENT
+       │
+       ▼
+UNDERSTAND INTENT
+       │
+       ▼
+BOUNDED MCP READ LOOP (get_service_health, get_error_rate, query_logs, diffs, runbooks)
+       │
+       ▼
+EVIDENCE LEDGER (Provenance tracking; strictly forbids false EXECUTED/VERIFIED labels)
+       │
+       ▼
+HYPOTHESIS EVALUATION (Rank primary checkout-v42 regression vs. alternative dependency failures)
+       │
+       ▼
+RECOMMEND REMEDIATION (Recommend rollback_deployment(checkout-v42))
+       │
+       ▼
+EXECUTION BOUNDARY INVARIANT (execution_status: NOT_EXECUTED in Phase 4)
+```
+
+Key features:
+- **Zero direct simulator access**: The agent communicates with operational state exclusively over the MCP Streamable HTTP protocol.
+- **Strict action boundary**: `rollback_deployment` is explicitly blocked from agent invocation in Phase 4; remediation is recommended but requires human approval (Phase 5) before controlled execution (Phase 6).
+- **Prompt injection defense**: Operational logs, runbooks, and incident text are classified as untrusted data and sanitized to prevent instruction override attacks.
+- **Evidence ledger**: Every claim maps to atomic evidence items with strict provenance.
+- **Deterministic CI provider**: `DeterministicInvestigationProvider` guarantees 100% reproducible test runs with zero network dependencies.
 
 ---
 
@@ -341,17 +382,28 @@ RALLY/
 │   └── tools/                       ← Investigation & remediation tool definitions
 │       ├── read_tools.py            ← 7 operational read tools
 │       └── write_tools.py           ← 1 controlled rollback tool
+├── agent/                           ← Bounded Agentic Investigation
+│   ├── models.py                    ← Incident, evidence, hypothesis, and report schemas
+│   ├── policies.py                  ← Security allowlists & prompt injection defense
+│   ├── mcp_client.py                ← MCP client adapter (Streamable HTTP protocol)
+│   ├── evidence.py                  ← Evidence ledger & provenance tracking
+│   ├── hypotheses.py                ← Hypothesis evaluation & comparative ranking
+│   ├── providers.py                 ← LLMProvider interface & Deterministic provider
+│   ├── orchestrator.py              ← Bounded investigation loop orchestrator
+│   └── reports.py                   ← Report formatting utilities
 ├── tests/
-│   ├── unit/                        ← Unit tests (simulator + API + MCP)
+│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent)
 │   │   ├── test_config.py
 │   │   ├── test_health_service.py
 │   │   ├── test_simulator.py
-│   │   └── test_mcp.py
-│   └── integration/                 ← Integration tests (API + MCP Protocol)
+│   │   ├── test_mcp.py
+│   │   └── test_agent.py
+│   └── integration/                 ← Integration tests (API + MCP + Agent)
 │       ├── test_golden_scenario.py
 │       ├── test_golden_mcp_scenario.py
 │       ├── test_health_routes.py
-│       └── test_mcp_server.py
+│       ├── test_mcp_server.py
+│       └── test_agent_investigation.py
 ├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md

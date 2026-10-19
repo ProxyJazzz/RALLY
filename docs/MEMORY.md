@@ -98,19 +98,44 @@ Release regression in `checkout-api`:
 - Golden scenario executed completely over real MCP protocol client session
 - Frontend build remains clean
 
+### Phase 4 — Agentic Investigation ✅ (2026-10-19)
+- Git branch: `feature/phase-4-agentic-investigation`
+- Built bounded, auditable investigation agent in package `agent/`
+- Strongly typed Pydantic models for incident requests, evidence ledger items, hypotheses, recommendations, and structured reports
+- `AgentPolicyEngine` enforces strict tool allowlist (7 read tools permitted) and completely blocks write operations (`rollback_deployment`) from agent invocation
+- Prompt injection defense: operational data (logs, deployments, runbooks) is strictly treated as untrusted data and sanitized
+- `AgentMCPClient` interacts exclusively with the operational world over Streamable HTTP MCP protocol (`mcp.client.session.ClientSession`); direct imports/mutations of simulator state are strictly forbidden
+- `EvidenceLedger` provides provenance tracking and enforces that `EXECUTED`, `VERIFIED`, and `APPROVED` labels cannot be emitted during investigation
+- `HypothesisEvaluator` ranks candidate hypotheses (primary checkout regression vs. alternative payment, inventory, and auth dependency failures)
+- `LLMProvider` abstraction with `DeterministicInvestigationProvider` guarantees zero-network, 100% reproducible test execution
+- Bounded loop bounds enforced (`max_tool_calls`, `max_iterations`, `timeout_seconds`)
+- Invariant preserved: `execution_status = "NOT_EXECUTED"` (remediation is recommended, never executed in Phase 4)
+- Added 13 new tests (8 unit tests + 5 MCP protocol integration tests)
+- 69/69 total tests passing in 1.84s (100% pass rate across entire repo)
+- Frontend build remains clean
+
 ## Current File Being Worked On
 
-None — Phase 3 complete.
+None — Phase 4 complete.
 
 ## Next Task
 
-Phase 4 — Agentic Investigation:
-- Amazon Bedrock client integration / investigation agent
-- Intent interpretation and multi-step investigation loop using MCP read tools
-- Evidence gathering, hypothesis generation, and correlation
-- Diagnostic reasoning without hallucination
+Phase 5 — Planning + Governance:
+- Action plan generation from investigation recommendations
+- Policy risk assessment engine (deterministic risk classification: LOW, MEDIUM, HIGH, CRITICAL)
+- Human-in-the-loop approval workflow (gating consequential actions like rollback)
+- Audit log persistence of approval events
 
 ## Decisions
+
+### Decision: Remediation execution strictly prohibited in Phase 4
+Reason: Architectural separation of concerns. Phase 4 is limited to investigation and recommendation. Consequential actions (e.g. `rollback_deployment`) require policy checks and human approval (Phase 5) before controlled execution and recovery verification (Phase 6).
+
+### Decision: Evidence ledger label invariant
+Reason: To prevent model hallucinations or premature claims of resolution, the agent policy engine actively rejects emitting `EXECUTED` or `VERIFIED` evidence labels when no action was executed.
+
+### Decision: Untrusted data classification for operational logs and metadata
+Reason: To mitigate prompt injection risks, all log entries, runbook content, and incident text are classified as untrusted data and sanitized before ledger ingestion.
 
 ### Decision: Official MCP SDK package naming disambiguation
 Reason: Python package is `mcp`. To prevent local folder import collisions when running `import mcp`, the local MCP server adapter layer is located in package `rally_mcp/`.
@@ -193,4 +218,13 @@ After every task record:
 - Implemented safe error envelopes and strict schema validation.
 - Added 13 new tests (unit + protocol integration). All 56/56 tests pass in 1.27s.
 - Verified end-to-end golden incident scenario across live MCP client session.
+
+### 2026-10-19 — Phase 4
+- Implemented bounded Agentic Investigation Layer on branch `feature/phase-4-agentic-investigation`.
+- Created `agent/` package with `InvestigationOrchestrator`, `EvidenceLedger`, `HypothesisEvaluator`, `AgentPolicyEngine`, `AgentMCPClient`, and `DeterministicInvestigationProvider`.
+- Enforced strict tool allowlist (7 read tools allowed; rollback_deployment blocked from agent execution).
+- Added prompt injection defense and untrusted content sanitization.
+- Verified golden incident investigation across live MCP Streamable HTTP transport.
+- Confirmed strict action boundary invariant (`execution_status = "NOT_EXECUTED"`).
+- Added 13 new tests (unit + protocol integration). All 69/69 tests pass in 1.84s.
 

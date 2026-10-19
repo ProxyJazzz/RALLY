@@ -320,6 +320,60 @@ The MCP layer (`rally_mcp/`) implements the Model Context Protocol using the off
 - **Deferred Tools**: Speculative write operations (`create_incident`, `restart_service`, `scale_service`, `send_incident_update`, `close_incident`) are strictly omitted until downstream domain support is built.
 - **Security Invariant**: Strictly zero arbitrary code, shell, SQL, or generic HTTP execution tools. All tool inputs are validated and exceptions mapped into non-leaking JSON error envelopes.
 
+## 8.3 Agentic Investigation Layer Architecture (Phase 4)
+
+Phase 4 introduces the first bounded reasoning and investigation agent (`agent/`).
+
+```text
+┌────────────────────────────────────────────────────────┐
+│               RALLY Investigation Agent                │
+│                                                        │
+│  Incident Request (INC-...)                            │
+│         │                                              │
+│         ▼                                              │
+│  State Machine (RECEIVED → UNDERSTANDING →             │
+│                 INVESTIGATING → FORMING_HYPOTHESES →   │
+│                 RECOMMENDING → COMPLETE)               │
+│         │                                              │
+│         ▼                                              │
+│  LLM Provider Abstraction                              │
+│  (DeterministicInvestigationProvider / BedrockProvider)│
+│         │                                              │
+│         ▼                                              │
+│  AgentPolicyEngine (Validates allowlist & injection)   │
+│         │                                              │
+│         ▼                                              │
+│  AgentMCPClient (Streamable HTTP MCP Client)           │
+└──────────────────────────┬─────────────────────────────┘
+                           │ MCP Protocol (JSON-RPC)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                    RALLY MCP Server                    │
+│                 (rally_mcp/server.py)                  │
+│       Allowed: 7 read tools (health, errors, logs,     │
+│                deployments, diffs, dependencies,       │
+│                runbooks)                               │
+│       Blocked: rollback_deployment (NOT callable by    │
+│                investigation agent)                    │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Domain method invocation
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                   Incident Simulator                   │
+│               (Deterministic World State)              │
+└────────────────────────────────────────────────────────┘
+```
+
+### Components
+- **Domain Models (`agent/models.py`)**: Strongly typed models for `IncidentRequest`, `EvidenceItem`, `Hypothesis`, `RecommendedAction`, `InvestigationReport`, and `AgentEvent`.
+- **Policy Engine (`agent/policies.py`)**: Enforces tool allowlists (7 read tools allowed, write/consequential tools strictly blocked) and neutralizes prompt injection in untrusted simulator logs or incident descriptions.
+- **MCP Client Adapter (`agent/mcp_client.py`)**: Interacts with the operational world exclusively over Streamable HTTP MCP protocol (`mcp.client.session.ClientSession`). The agent cannot directly import or mutate simulator state.
+- **Evidence Ledger (`agent/evidence.py`)**: Records observations with explicit source tools and references, enforcing labels (`OBSERVED`, `INFERRED`, `PROPOSED`). Strictly forbids emitting `EXECUTED` or `VERIFIED` during investigation.
+- **Hypothesis Evaluator (`agent/hypotheses.py`)**: Generates and ranks primary and alternative hypotheses (e.g. comparing checkout deployment regression against payment, inventory, and auth dependency failures).
+- **Provider Abstraction (`agent/providers.py`)**: `LLMProvider` abstract interface decoupled from vendor SDKs, paired with `DeterministicInvestigationProvider` for zero-network, reproducible CI execution.
+- **Orchestrator (`agent/orchestrator.py`)**: Bounded investigation loop with strict limits (`max_tool_calls`, `max_iterations`, `timeout_seconds`). Produces structured reports and human-readable summaries.
+- **Action Boundary Invariant**: The agent recommends remediation (`rollback_deployment(checkout-v42)`), but its execution status remains strictly `NOT_EXECUTED` in Phase 4. Execution is deferred to human approval (Phase 5) and controlled verification (Phase 6).
+
 
 ## 9. Execution Contract
 
