@@ -159,18 +159,47 @@ Release regression in `checkout-api`:
 - 90/90 total tests passing in 2.52s (100% pass rate across entire repo)
 - Frontend build remains clean
 
+### Phase 7 — AWS Builder Integration ✅ (2026-10-20)
+- Git branch: `feature/phase-7-aws-builder-integration`
+- Built dedicated AWS integration package under `aws/`
+- Implemented `BedrockInvestigationProvider` connecting to Amazon Bedrock Runtime via `converse()` API:
+  - Supports configurable model ID (`anthropic.claude-3-5-sonnet-20241022-v2:0`) and region
+  - Enforces schema validation on JSON outputs
+  - Strictly enforces evidence provenance (rejects non-existent IDs like `EV-999`)
+  - Bounded token limits, request timeouts, and exponential backoff retries
+  - Clean error handling (distinguishes missing credentials, bad JSON, unauthorized tools)
+  - Emits structured `AWSObservabilityEvent` audit logs
+- Implemented `StrandsInvestigationAgent` orchestration adapter:
+  - Coordinates iterative evidence analysis cycles with Amazon Bedrock
+  - Interacts strictly across Streamable HTTP MCP Client boundary
+  - Preserves downstream deterministic governance gate (halts at `REQUIRES_APPROVAL`)
+- Evaluated AgentCore: deferred with documented justification (RALLY already has dedicated MCP server runtime and deterministic governance)
+- Preserved 100% offline deterministic test suite (zero network/AWS dependency for standard pytest run)
+- Created opt-in live test (`test_live_bedrock_integration`) gated by `RUN_AWS_INTEGRATION_TESTS=true`
+- Added 7 new tests (6 unit tests + 1 integration test); 97 passed, 1 skipped
+- Frontend build remains clean
+
 ## Current File Being Worked On
 
-None — Phase 6 complete.
+None — Phase 7 complete.
 
 ## Next Task
 
-Phase 7 — AWS Builder Integration:
-- Amazon Bedrock model inference integration
-- Documented AWS configuration and fallback handling
-- Product Feedback documentation on AWS services
+Phase 8 — Alexa+ Track Integration:
+- Build self-hosted MCP Streamable HTTP endpoint for Alexa+ integration
+- Ensure compliance with MCP protocol specifications
+- Implement Alexa+ testing/demo path
 
 ## Decisions
+
+### Decision: Dual Provider Abstraction (Deterministic vs. Bedrock/Strands)
+Reason: Production systems need cloud model intelligence, but CI/CD and safety testing require 100% offline reproducibility. The `LLMProvider` abstraction allows seamless switching between `DeterministicInvestigationProvider` and `BedrockInvestigationProvider` / `StrandsInvestigationAgent`.
+
+### Decision: Strict Evidence Provenance Validation in Model Adapters
+Reason: LLMs can hallucinate citations. `BedrockInvestigationProvider` actively validates that every `supporting_evidence_ids` or `contradicting_evidence_ids` returned in Bedrock's JSON output exists in the `EvidenceLedger`. Citing a non-existent ID raises `EvidenceProvenanceValidationError`.
+
+### Decision: AgentCore Evaluation and Deferral
+Reason: RALLY already has a robust MCP server/client boundary and a deterministic governance layer. Adding AgentCore at this phase without a concrete, non-duplicative architectural responsibility would introduce unnecessary complexity.
 
 ### Decision: Strict Separation of Execution and Verification
 Reason: The core reliability architectural principle dictates: "The same action that changes system state cannot be its own proof that recovery succeeded." Controlled execution and independent verification are decoupled into distinct engines. Execution records the mutation, while independent verification performs subsequent read-only telemetry queries to establish ground truth recovery.

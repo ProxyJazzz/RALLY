@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 6 — Execution + Verification** ✅
+**Phase 7 — AWS Builder Integration** ✅
 
-Controlled MCP Writes (`rollback_deployment`) • Immediate Pre-Execution Precondition Revalidation (TOCTOU Defense) • Single-Execution Idempotency • Execution Duration Tracking • Independent Multi-Check Verification (`get_service_health`, `get_error_rate`, `get_dependency_health`, `query_logs`) • Explicit Recovery Decision State Machine (`RESOLVED`, `RECOVERY_FAILED`, `NEEDS_HUMAN`, `EXECUTION_BLOCKED`)
+Amazon Bedrock Reasoning (`converse` API, Claude 3.5 Sonnet) • Strands Agentic Investigation Pattern • Provider Abstraction (`DeterministicInvestigationProvider` vs. `BedrockInvestigationProvider`) • Strict Evidence Provenance Validation (Rejection of Invented Evidence IDs) • Bounded Token Limits & Retries • Prompt Injection Structural Isolation • Structured AWS Observability Audit Events
 
 ---
 
@@ -180,8 +180,17 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests (90 unit & protocol integration tests across all phases)
+# Run all tests (97 offline unit & protocol integration tests across all phases)
 python -m pytest tests/ -v
+
+# Run Phase 7 AWS Bedrock and Strands Agent integration tests
+python -m pytest tests/integration/test_aws_bedrock.py -v
+
+# Run Phase 7 AWS unit tests (mock Bedrock, schema validation, provenance checks)
+python -m pytest tests/unit/test_aws.py -v
+
+# (Optional) Run live Amazon Bedrock integration test if AWS credentials are configured
+RUN_AWS_INTEGRATION_TESTS=true python -m pytest tests/integration/test_aws_bedrock.py -k test_live_bedrock_integration -v
 
 # Run Phase 6 Golden Execution and Verification integration tests
 python -m pytest tests/integration/test_golden_execution.py -v
@@ -220,7 +229,50 @@ python -m pytest tests/unit/test_simulator.py -v
 python -m pytest tests/unit/test_config.py tests/unit/test_health_service.py tests/integration/test_health_routes.py -v
 
 # With coverage
-python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov=governance --cov=execution --cov-report=term-missing
+python -m pytest tests/ --cov=app --cov=simulator --cov=rally_mcp --cov=agent --cov=governance --cov=execution --cov=aws --cov-report=term-missing
+```
+
+---
+
+## AWS SETUP — MANUAL STEPS
+
+To run RALLY with live Amazon Bedrock foundation models:
+
+1. **Configure AWS Credentials**: Use an IAM role, AWS IAM Identity Center (SSO), or configure your credentials via `aws configure`.
+   *(Do NOT hard-code or commit access keys into source code or `.env` files).*
+2. **Configure AWS Region**: Ensure `AWS_REGION` is set in your environment or `.env` (e.g. `AWS_REGION=us-east-1` or `us-west-2`).
+3. **Configure Bedrock Model**: Ensure your AWS account has access to the target foundation model in the configured region (default: `anthropic.claude-3-5-sonnet-20241022-v2:0`). Set `BEDROCK_MODEL_ID` in `.env` if using a different model ID.
+4. **Execute Live Verification (Optional)**:
+   ```bash
+   RUN_AWS_INTEGRATION_TESTS=true python -m pytest tests/integration/test_aws_bedrock.py -k test_live_bedrock_integration -v
+   ```
+5. **Offline Mode**: If credentials are not present, RALLY automatically uses `DeterministicInvestigationProvider`, ensuring 100% test reproducibility with zero cloud dependencies.
+
+---
+
+## AWS Builder Integration (Phase 7)
+
+The AWS integration (`aws/`) connects RALLY's investigation loop to Amazon Bedrock and the Strands Agent pattern:
+
+```text
+Incident Request
+       │
+       ▼
+Strands Agent Pattern (aws/strands.py)
+       ├── Multi-phase reasoning cycles (evidence gaps -> correlation -> hypotheses)
+       └── Read-only tool calls strictly across MCP Protocol boundary
+       │
+       ▼
+Amazon Bedrock Converse API (aws/bedrock.py)
+       ├── Prompt structural isolation (System instructions vs. untrusted telemetry)
+       ├── Structured Pydantic JSON parsing (BedrockReasoningOutput)
+       └── Strict Evidence Provenance Validation (Rejects hallucinated IDs like EV-999)
+       │
+       ▼
+Remediation Recommendation (execution_status: NOT_EXECUTED)
+       │
+       ▼
+Downstream Deterministic Governance Gate (Phase 5) -> Human Approval -> Controlled Execution (Phase 6)
 ```
 
 ---
@@ -498,23 +550,31 @@ RALLY/
 │   ├── verifier.py                  ← IndependentVerifier (separate read-only checks)
 │   ├── orchestrator.py              ← ExecutionOrchestrator pipeline
 │   └── exceptions.py                ← Domain exceptions
+├── aws/                             ← AWS Builder Integration (Bedrock & Strands)
+│   ├── bedrock.py                   ← BedrockInvestigationProvider (Converse API client)
+│   ├── strands.py                   ← StrandsInvestigationAgent (Reasoning cycle orchestration)
+│   ├── prompts.py                   ← Isolated prompt templates & untrusted data filters
+│   ├── schemas.py                   ← Structured output & observability schemas
+│   └── exceptions.py                ← Typed AWS domain exceptions
 ├── tests/
-│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent + Governance + Execution)
+│   ├── unit/                        ← Unit tests (simulator + API + MCP + Agent + Governance + Execution + AWS)
 │   │   ├── test_config.py
 │   │   ├── test_health_service.py
 │   │   ├── test_simulator.py
 │   │   ├── test_mcp.py
 │   │   ├── test_agent.py
 │   │   ├── test_governance.py
-│   │   └── test_execution.py
-│   └── integration/                 ← Integration tests (API + MCP + Agent + Governance + Execution)
+│   │   ├── test_execution.py
+│   │   └── test_aws.py
+│   └── integration/                 ← Integration tests (API + MCP + Agent + Governance + Execution + AWS)
 │       ├── test_golden_scenario.py
 │       ├── test_golden_mcp_scenario.py
 │       ├── test_health_routes.py
 │       ├── test_mcp_server.py
 │       ├── test_agent_investigation.py
 │       ├── test_golden_governance.py
-│       └── test_golden_execution.py
+│       ├── test_golden_execution.py
+│       └── test_aws_bedrock.py
 ├── docs/                            ← Project documentation
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md

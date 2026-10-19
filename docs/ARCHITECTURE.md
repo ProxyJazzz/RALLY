@@ -487,6 +487,59 @@ Phase 6 implements the controlled execution and independent verification subsyst
 - **IndependentVerifier (`execution/verifier.py`)**: Read-only verification engine querying health, error rate, dependencies, and logs. Operates under the principle: *The same action that changes system state cannot be its own proof that recovery succeeded.*
 - **ExecutionOrchestrator (`execution/orchestrator.py`)**: Coordinates the complete `revalidate -> execute -> record -> verify -> decide` pipeline.
 
+### 8.6 AWS Builder Integration Architecture (Phase 7)
+
+Phase 7 introduces a meaningful AWS-backed agentic reasoning layer via Amazon Bedrock and Strands Agent pattern, preserving deterministic governance, security, and tool boundaries.
+
+```text
+┌────────────────────────────────────────────────────────┐
+│               Incident Operational Context             │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│     Strands Agent Orchestration (aws/strands.py)       │
+│                                                        │
+│  Coordinates multi-step reasoning cycles:              │
+│  1. Evidence Analysis & Gap Detection                  │
+│  2. Tool execution exclusively over MCP Client session │
+│  3. Evidence Ledger provenance tracking                │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│      Amazon Bedrock Reasoning (aws/bedrock.py)         │
+│                                                        │
+│  Model: Anthropic Claude 3.5 Sonnet / AWS Converse API │
+│  Prompt isolation: System vs. Untrusted Data           │
+│  Strict Structured JSON output schema validation       │
+│  CRITICAL: Evidence Provenance Validation              │
+│  (Rejects hallucinated / non-existent evidence IDs)    │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Recommendation
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│      Deterministic Governance Gate (Phase 5)           │
+│  (PolicyEngine: REQUIRES_APPROVAL, RiskEngine: HIGH)   │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│              Explicit Human Approval                   │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│        Controlled Execution & Verification (Phase 6)   │
+└────────────────────────────────────────────────────────┘
+```
+
+### Components
+- **`BedrockInvestigationProvider` (`aws/bedrock.py`)**: Implements `LLMProvider` using Amazon Bedrock Runtime `converse()` API. Enforces schema validation, bounded timeouts, retries, and evidence provenance verification.
+- **`StrandsInvestigationAgent` (`aws/strands.py`)**: Orchestrates multi-phase investigation loops. Communicates exclusively across the Streamable HTTP MCP boundary and never accesses the simulator directly.
+- **Provider Abstraction**: Allows seamless switching between `DeterministicInvestigationProvider` (for 100% offline testing, CI, and determinism) and `BedrockInvestigationProvider` / `StrandsInvestigationAgent` (for production AWS cloud inference).
+- **AgentCore Evaluation**: Evaluated and explicitly deferred. RALLY already has an official MCP server/client runtime and a dedicated deterministic governance subsystem. Introducing AgentCore without an explicit architectural gap would add redundant abstraction without reliability gain.
+
 ## 9. Execution Contract
 
 ```text
