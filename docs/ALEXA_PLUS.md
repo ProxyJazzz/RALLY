@@ -181,7 +181,7 @@ The Alexa+ MCP integration is designed around OAuth 2.1 specifications:
   - `rally:incident:read`: Read telemetry, logs, diffs, context, plans, and verification.
   - `rally:incident:write`: Trigger controlled execution of previously human-approved plans.
 
-*Local/Dev Mode*: When `RALLY_MCP_AUTH_ENABLED=false`, the server operates locally without token headers, allowing rapid automated integration and deterministic testing.
+*Local/Demo Mode*: Authentication is not yet configured for the local/demo MCP endpoint (`RALLY_MCP_AUTH_ENABLED=false`), allowing rapid automated integration, local testing, and hackathon evaluation without external IdP requirements.
 
 ---
 
@@ -189,26 +189,25 @@ The Alexa+ MCP integration is designed around OAuth 2.1 specifications:
 
 Alexa+ requires public HTTPS ingress to reach the MCP server.
 
-### Local Development Tunneling (Cloudflare Tunnel)
+### Local Development Tunneling (Cloudflare Quick Tunnel)
 
-1. **Install Cloudflared**:
-   ```bash
-   brew install cloudflared
-   ```
-2. **Start the RALLY MCP Server**:
+1. **Start the RALLY MCP Server**:
    ```bash
    source apps/api/.venv/bin/activate
-   python -m rally_mcp.server --host 127.0.0.1 --port 8001
+   python -m rally_mcp.server
    ```
-3. **Open Tunnel**:
+2. **Open Cloudflare Quick Tunnel**:
    ```bash
    cloudflared tunnel --url http://127.0.0.1:8001
    ```
-4. **Configure RALLY Environment**:
+3. **Configure RALLY Environment**:
    Update `.env`:
    ```env
    RALLY_MCP_PUBLIC_URL=https://<your-tunnel-id>.trycloudflare.com/mcp
    ```
+
+> [!WARNING]
+> **Ephemeral URLs**: Cloudflare Quick Tunnel URLs (e.g. `*.trycloudflare.com`) are ephemeral and change whenever the tunnel process is restarted. Do NOT hardcode tunnel URLs into source code. Always use `RALLY_MCP_PUBLIC_URL` or configuration overrides.
 
 ---
 
@@ -242,8 +241,8 @@ Run all unit and integration tests covering Alexa+ MCP workflows:
 ```bash
 source apps/api/.venv/bin/activate
 
-# Unit tests (models, context manager, error handling)
-python -m pytest tests/unit/test_alexa.py -v
+# Unit tests (models, context manager, error handling, adapter boundaries)
+python -m pytest tests/unit/test_alexa.py tests/unit/test_alexa_adapter.py -v
 
 # Integration tests (multi-turn lifecycle, prompt injection, latency benchmark)
 python -m pytest tests/integration/test_alexa_mcp.py -v
@@ -255,7 +254,8 @@ python -m pytest tests/integration/test_alexa_mcp.py -v
 
 *Current Status*: **PENDING DEVELOPER ACCESS / LIVE HARDWARE VALIDATION**
 - Local Streamable HTTP MCP server: **Verified** (100% compliant)
-- Multi-turn conversational flow: **Verified locally via MCP ClientSession**
+- Public Cloudflare Quick Tunnel: **Verified** (13 tools discovered remotely via MCP ClientSession)
+- Multi-turn conversational flow: **Verified locally via MCP ClientSession & AlexaConversationalAdapter**
 - Live AWS Alexa+ Developer Account connection: **Pending credential setup / developer program approval**
 
 ---
@@ -263,7 +263,8 @@ python -m pytest tests/integration/test_alexa_mcp.py -v
 ## 13. Security Model
 
 - **Prompt Injection Defense**: Validated against jailbreaks, simulated approvals, DROP TABLE strings, and requests to bypass safety policies. All return structured error envelopes (`INCIDENT_NOT_FOUND` / `INVALID_IDENTIFIER`).
-- **Forbidden Tools**: Prohibited generic chat or execution tools (`chat`, `shell`, `exec`, `do_anything`) are strictly absent from tool registration.
+- **Forbidden Tools**: Prohibited generic chat or execution tools (`chat`, `shell`, `exec`, `do_anything`, `eval`, `arbitrary_command`) are strictly absent from tool registration and actively blocked by `AlexaConversationalAdapter`.
+- **Approval Boundary**: Conversational requests ("Roll it back", "Fix it", "Pretend it's approved") cannot bypass governance. Explicit approval is strictly separated from conversational intent.
 - **Audit Trails**: All conversational interactions generate structured observability events (`ALEXA_MCP_TOOL_CALLED`, `ALEXA_GOVERNANCE_BLOCKED`).
 - **No Direct Simulator Access**: Alexa+ integration modules never import `simulator` directly.
 
@@ -285,17 +286,38 @@ Measured local round-trip latency over Streamable HTTP transport:
 
 ## 15. Product Feedback
 
-### Alexa+ MCP Toolkit & SDK
-- **What Worked Well**: The official Python `mcp` SDK (`streamable_http_client` and `StreamableHTTPTransport`) provides robust JSON-RPC handling with native session life-cycle events.
-- **What Was Difficult**: Testing multi-turn conversational state requires strict separation between conversational context and backend domain states to avoid state drift.
-- **Recommended Improvement**: Provide an official Alexa+ local mock harness simulating voice-to-MCP turn interactions directly within automated pytest suites.
+### 1. Model Context Protocol (MCP) Python SDK
+- **Purpose**: Server-side tool registration, Streamable HTTP transport hosting, and client session communication.
+- **What Worked Well**: The official Python `mcp` SDK (`StreamableHTTPTransport`, `streamable_http_client`, and `ClientSession`) provides clean protocol framing, session management, and JSON-RPC 2.0 handling.
+- **What Needs Improvement**: Documentation around configuring Starlette ASGI apps with custom route prefixes and handling session headers in raw HTTP testing needs clearer examples.
+- **Onboarding/Setup Experience**: Straightforward installation via pip (`pip install mcp`); clean integration with Starlette.
+- **Would You Reuse It?**: Yes, highly recommended for standardizing tool interfaces for AI agents.
+
+### 2. Streamable HTTP Transport
+- **Purpose**: Remote HTTP/SSE transport for MCP server communication across public internet and tunneling gateways.
+- **What Worked Well**: Handles streaming chunked responses, session reconnection, and clean lifecycle teardown (`POST` -> `GET` SSE -> `DELETE`). Compatible with standard reverse proxies and Cloudflare Tunnels without custom protocol plugins.
+- **What Needs Improvement**: Better error descriptions when client requests omit `Mcp-Session-Id` during non-initialization requests.
+- **Onboarding/Setup Experience**: Built directly into the MCP SDK (`server.streamable_http_app()`).
+- **Would You Reuse It?**: Yes.
+
+### 3. Alexa+ MCP Integration & Tooling
+- **Purpose**: Enable natural conversational incident investigation, evidence summarization, and recovery coordination via voice.
+- **Status**: **NOT YET VERIFIED ON LIVE HARDWARE** (Verified via local protocol harness & remote tunnel handshake).
+- **What Worked Well**: 13 typed tool schemas accurately distinguish operational read capabilities from conversational summarization tools.
+- **What Needs Improvement**: Standardize local mock voice-turn runner in the Alexa AI SDK so developers can simulate multi-turn speech dialogues in local CI before cloud deployment.
+- **Would You Reuse It?**: Yes, provided live developer tooling is expanded.
+
+### 4. Alexa AI CLI
+- **Purpose**: CLI tooling for configuring, managing, and registering MCP add-ons with Alexa+.
+- **Status**: **NOT YET VERIFIED ON LIVE HARDWARE**.
 
 ---
 
 ## 16. Known Limitations
 
-1. **Authentication in Local Mode**: OAuth 2.1 token validation is disabled in local test mode to allow standalone pytest execution without requiring an external identity provider.
-2. **Live Device Provisioning**: Requires an active Alexa+ developer preview account and registered Cloudflare/ngrok HTTPS tunnel.
+1. **Authentication in Local Mode**: Authentication is not yet configured for the local/demo MCP endpoint (`RALLY_MCP_AUTH_ENABLED=false`).
+2. **Ephemeral Tunnel URLs**: Cloudflare Quick Tunnels generate ephemeral URLs that must be passed via `RALLY_MCP_PUBLIC_URL`.
+3. **Live Device Provisioning**: Requires an active Alexa+ developer preview account.
 
 ---
 
@@ -304,6 +326,7 @@ Measured local round-trip latency over Streamable HTTP transport:
 - [x] Streamable HTTP MCP server operational (`/mcp` endpoint)
 - [x] Protocol spec 2025-11-25 compatible
 - [x] 13 valid typed MCP tools registered with complete schemas
+- [x] Remote MCP tool discovery verified over public HTTPS tunnel
 - [x] Multi-turn conversational flow tested end-to-end
 - [x] Strict human approval boundary verified (conversational "roll it back" blocked)
 - [x] Independent verification required before declaring recovery

@@ -179,41 +179,27 @@ Release regression in `checkout-api`:
 - Added 7 new tests (6 unit tests + 1 integration test); 97 passed, 1 skipped
 - Frontend build remains clean
 
-### Phase 8 — Alexa+ MCP Integration ✅ (2026-10-20)
+### Phase 8A — Alexa+ MCP Integration Surface ✅ (2026-10-20)
 - Git branch: `feature/phase-8-alexa-plus-integration`
-- Built dedicated Alexa+ integration package under `alexa/`:
-  - `alexa/models.py`: Strongly typed Pydantic models for `ConversationalIncidentContext`, `InvestigationSummaryResponse`, `ActionPlanResponse`, `ExecutionStatusResponse`, `VerificationStatusResponse`, and `AlexaObservabilityEvent`
-  - `alexa/context.py`: `IncidentContextManager` providing in-memory authoritative incident state tracking and lifecycle transitions
-  - `alexa/tools.py`: 5 dedicated conversational MCP tool handlers (`get_incident_context`, `get_investigation_summary`, `get_action_plan`, `get_execution_status`, `get_verification_status`)
-  - `alexa/exceptions.py`: Typed exceptions for incident not found, action plan not found, unauthorized conversational approval, and stale context
-- Integrated with `rally_mcp/server.py`:
-  - Added `enable_alexa_tools` configuration flag (defaulting to True)
-  - Registered the 5 conversational tools alongside the 8 base operational tools (13 total registered tools)
-  - Updated error mapper in `rally_mcp/errors.py` to handle Alexa integration exceptions cleanly without circular dependencies
-- Protocol and Transport Verification:
-  - Verified MCP protocol spec 2025-11-25 compatibility over Streamable HTTP transport (`StreamableHTTPTransport` / Starlette ASGI session manager)
-  - Verified `initialize`, `tools/list`, and `tools/call` over real Streamable HTTP client session
-- Governance and Safety Boundary:
-  - Conversational prompts like "Roll it back" cannot trigger execution; returns `NOT_EXECUTED` (approval required)
-  - Execution strictly preserved behind human approval gate (`ApprovalService.approve(...)`)
-  - Independent verification required before declaring recovery
-- Prompt Injection & Security:
-  - Validated defense against injection payloads, fake approval claims, and arbitrary tool executions
-  - Strict absence of generic or unsafe tools (`shell`, `execute`, `chat`, `ask_rally`)
-- Performance:
-  - Read query latency benchmarks run well under 500 ms target (local round-trip average < 10 ms)
+- Implemented `alexa.config.AlexaMCPConfig`:
+  - Dynamically loads `RALLY_MCP_PUBLIC_URL` from environment without hardcoding ephemeral Cloudflare URLs.
+  - Enforces strict allowlist of 13 tools and explicit blocklist of dangerous/generic tools (`shell`, `execute_command`, `eval`, `chat`).
+- Implemented `alexa.adapter.AlexaConversationalAdapter`:
+  - Translates conversational intents to structured MCP tool invocations over Streamable HTTP.
+  - Enforces strict approval semantics: distinguishes explicit approvals from ambiguous/interrogative prompts.
+  - Strictly prevents conversational execution bypass: conversational prompts return `NOT_EXECUTED` (approval required).
+  - Enforces verification boundary: cannot claim recovery unless independent verification returns `PASSED` / `RESOLVED`.
+- Live Remote MCP Endpoint Verification:
+  - Verified remote tool discovery over Cloudflare Quick Tunnel (`https://republic-asset-tolerance-douglas.trycloudflare.com/mcp`).
+  - Remote MCP session initialization confirmed and discovered all 13 tools.
 - Testing:
-  - Added 9 new tests (6 unit tests in `test_alexa.py` + 3 integration tests in `test_alexa_mcp.py`)
-  - Total test suite: 105 passed, 1 skipped in 3.66s (100% pass rate)
-  - Frontend build clean
-- Remote / Alexa AI CLI Deployment:
-  - Documented Cloudflare tunnel workflow (`RALLY_MCP_PUBLIC_URL`)
-  - Documented Alexa AI CLI configuration and add-on registration in `docs/ALEXA_PLUS.md`
-  - Live integration marked as pending developer access/credentials
+  - Added 12 new unit and boundary tests in `tests/unit/test_alexa_adapter.py`.
+  - Total test suite: 118 passed, 1 skipped in 3.64s (100% pass rate).
+  - Frontend build clean (built in 416ms).
 
 ## Current File Being Worked On
 
-None — Phase 8 complete.
+None — Phase 8A complete.
 
 ## Next Task
 

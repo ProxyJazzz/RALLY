@@ -282,9 +282,9 @@ Alexa+ (Voice/Conversational Surface)
 ### Setup & Local Testing
 
 ```bash
-# 1. Run Alexa+ unit tests
+# 1. Run Alexa+ unit tests (models, context manager, adapter, approval semantics)
 source apps/api/.venv/bin/activate
-python -m pytest tests/unit/test_alexa.py -v
+python -m pytest tests/unit/test_alexa.py tests/unit/test_alexa_adapter.py -v
 
 # 2. Run Alexa+ integration tests (multi-turn lifecycle, prompt injection, latency benchmark)
 python -m pytest tests/integration/test_alexa_mcp.py -v
