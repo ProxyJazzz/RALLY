@@ -313,22 +313,61 @@ Measured local round-trip latency over Streamable HTTP transport:
 
 ---
 
-## 16. Known Limitations
+## 18. Phase 8B: Alexa+ Simulation Experience
 
-1. **Authentication in Local Mode**: Authentication is not yet configured for the local/demo MCP endpoint (`RALLY_MCP_AUTH_ENABLED=false`).
-2. **Ephemeral Tunnel URLs**: Cloudflare Quick Tunnels generate ephemeral URLs that must be passed via `RALLY_MCP_PUBLIC_URL`.
-3. **Live Device Provisioning**: Requires an active Alexa+ developer preview account.
+### Overview
+Because public developer preview accounts and physical hardware for Alexa+ remain limited during the hackathon period, RALLY provides an **Alexa+ Compatible Conversational Simulation Workspace** inside the web application (`apps/web`).
 
----
+This simulation is **strictly backed by RALLY's real operational systems**:
+- Real Streamable HTTP MCP server layer (`rally_mcp`)
+- Real Agentic Investigation orchestrator (`agent.orchestrator.InvestigationOrchestrator`)
+- Real Deterministic Governance & Risk Assessment (`governance.planner.ActionPlanner`)
+- Real Human SRE Approval Gate (`governance.approval.ApprovalService`)
+- Real Controlled Execution with TOCTOU pre-execution revalidation (`execution.executor.ControlledExecutor`)
+- Real Independent Verification (`execution.verifier.IndependentVerifier`)
+- Real Operational Simulation (`simulator.services.simulator.IncidentSimulator`)
 
-## 17. Hackathon Evidence Checklist
+### Truthful Disclosure
+> [!IMPORTANT]
+> **Simulated Alexa+ Surface**: This interface simulates an Alexa+ voice/conversational client interaction with RALLY over MCP. It does **not** claim to be connected to physical Alexa+ hardware or the Amazon Alexa Developer Console. The Amazon AppDev Hackathon rules explicitly permit a simulated Alexa+ experience.
 
-- [x] Streamable HTTP MCP server operational (`/mcp` endpoint)
-- [x] Protocol spec 2025-11-25 compatible
-- [x] 13 valid typed MCP tools registered with complete schemas
-- [x] Remote MCP tool discovery verified over public HTTPS tunnel
-- [x] Multi-turn conversational flow tested end-to-end
-- [x] Strict human approval boundary verified (conversational "roll it back" blocked)
-- [x] Independent verification required before declaring recovery
-- [x] Prompt injection defenses validated
-- [x] Latency benchmark passing (< 500ms target)
+### Architecture
+
+```text
+Operator / Judge (Browser UI)
+          │
+          ▼ (HTTP /api/alexa/chat)
+FastAPI Simulation Controller (`apps/api/app/api/routes/alexa_simulation.py`)
+          │
+          ▼
+AlexaSimulationService (`apps/api/app/services/alexa_simulation.py`)
+          ├── Conversational Intent Parser (`alexa.adapter.AlexaConversationalAdapter`)
+          ├── Authoritative Context Registry (`alexa.context.incident_context_manager`)
+          └── Real Streamable HTTP MCP Client (`agent.mcp_client.AgentMCPClient`)
+                    │
+                    ▼
+          RALLY MCP Server Layer (:8001/mcp)
+                    │
+                    ▼
+          Investigation -> Evidence -> Governance -> Approval -> Execution -> Verification
+```
+
+### Golden Path Interaction
+1. **Trigger Investigation**:
+   - User: *"Investigate the checkout incident and recover it if evidence supports rollback."*
+   - RALLY inspects service health, error rate (18.4%), logs, deployment history, diff (`order_validator.py`), and dependencies.
+   - Emits structured evidence with strict epistemic labels: `OBSERVED`, `INFERRED`, `PROPOSED`.
+2. **Review Findings**:
+   - User: *"What did you find?"* -> Explains root cause (`CHECKOUT_VALIDATION_REGRESSION` in `checkout-v42`).
+3. **Inspect Recommendation & Governance Gate**:
+   - User: *"Should we roll it back?"* -> Explains recommendation, `HIGH` risk level, and explicit human approval requirement.
+4. **Approval Gate Enforcement**:
+   - User says: *"Yes, approve the rollback."*
+   - RALLY notes conversational intent, but **refuses to execute via conversational utterance alone**. Directs operator to the human approval gate.
+   - Operator clicks **"Approve Rollback"** in the Governance Panel.
+5. **Controlled Execution & Independent Verification**:
+   - `ControlledExecutor` revalidates operational preconditions and executes `rollback_deployment`.
+   - `IndependentVerifier` queries live telemetry independently.
+   - Error rate recovers to `0.70%`, `checkout-v41` active -> Status transitions to **`RESOLVED`**.
+6. **Recovery Dialogue**:
+   - User: *"Is the service healthy now?"* -> RALLY verifies recovery and reports operational resolution.

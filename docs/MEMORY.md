@@ -197,16 +197,33 @@ Release regression in `checkout-api`:
   - Total test suite: 118 passed, 1 skipped in 3.64s (100% pass rate).
   - Frontend build clean (built in 416ms).
 
+### Phase 8B — Alexa+ Simulation Experience ✅ (2026-10-21)
+- Git branch: `feature/phase-8b-alexa-simulation`
+- Implemented real-backed conversational simulation workspace in `apps/web`:
+  - `ConversationalPanel`: Voice-like terminal command dialogue with suggested prompts and thinking indicators.
+  - `InvestigationTimeline`: Real-time operational timeline tracing MCP tool invocations (`get_service_health`, `get_error_rate`, `query_logs`, `get_deployment_diff`, `get_dependency_health`).
+  - `EvidenceLedgerPanel`: Explicit epistemic classifications (`OBSERVED`, `INFERRED`, `PROPOSED`, `APPROVED`, `EXECUTED`, `VERIFIED`).
+  - `GovernanceApprovalPanel`: Explicit Human SRE Authorization Gate (`[APPROVE ROLLBACK]` / `[REJECT]`), pre-execution revalidation, and independent verification display.
+- Implemented FastAPI simulation routes and backend service (`apps/api/app/services/alexa_simulation.py` & `routes/alexa_simulation.py`):
+  - `POST /api/alexa/chat`: Processes conversational utterances against RALLY's MCP investigation and context flow.
+  - `GET /api/alexa/state`: Provides full workspace snapshots.
+  - `POST /api/alexa/reset`: Resets simulator to fault regression condition.
+  - `POST /api/alexa/approve`: Applies explicit human operator approval/rejection to the governance gate.
+- Truthful Disclosure: Clearly identified as an Alexa+ Compatible Simulation Workspace backed by real MCP and governance, without claiming physical hardware or unverified developer console connectivity.
+- Testing:
+  - Added 5 integration tests in `tests/integration/test_alexa_simulation.py` (golden path, rejection path, state snapshots, error handling).
+  - Total test suite: 123 passed, 1 skipped in 3.90s (100% pass rate).
+  - Web production build passing cleanly.
+
 ## Current File Being Worked On
 
-None — Phase 8A complete.
+None — Phase 8B complete.
 
 ## Next Task
 
 Phase 9 — Command Center UX:
-- Web-based operations dashboard / incident command center
-- Real-time visualization of agent investigation, evidence ledger, approval gate, and verification
-- Connect web frontend to backend APIs and MCP events
+- Unified web-based operations dashboard and real-time event visualization
+- Live telemetry streaming and expanded incident management
 
 ## Decisions
 

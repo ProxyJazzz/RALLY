@@ -147,22 +147,12 @@ Good:
 Bad:
 > Uh-oh! The AI wants to do something risky.
 
-## 11. Signature Visual
+## 12. Alexa+ Simulation Workspace (Phase 8B)
 
-The signature component is the **Evidence → Decision → Verification rail**.
+The Alexa+ simulation workspace combines natural conversational intelligence with the dense, mission-control reliability console:
 
-It should make the central product promise visually obvious:
-
-```text
-Evidence collected
-      ↓
-Hypothesis formed
-      ↓
-Action proposed
-      ↓
-Human approval
-      ↓
-Action executed
-      ↓
-Recovery verified
-```
+- **Conversational Panel**: Left rail displaying user commands, assistant speech, and suggestion chips. Styled like a professional terminal dialogue.
+- **Investigation & Execution Timeline**: Chronological, icon-badged steps showing exact MCP tools invoked, latency, and operational outcomes.
+- **Strict Epistemic Evidence Ledger**: Badged cards distinguishing `OBSERVED`, `INFERRED`, `PROPOSED`, `APPROVED`, `EXECUTED`, and `VERIFIED`.
+- **Governance Approval Gate**: High-visibility risk box and explicit `[APPROVE ROLLBACK]` / `[REJECT]` buttons enforcing human-in-the-loop authorization.
+- **Recovery & Verification Panel**: Displays reinstated deployment version, independently verified error rate, and final `RESOLVED` classification.

@@ -8,9 +8,9 @@
 
 ## Current Phase
 
-**Phase 8 — Alexa+ MCP Integration** ✅
+**Phase 8B — Alexa+ Simulation Experience** ✅
 
-Self-Hosted Streamable HTTP MCP Server (MCP Spec 2025-11-25) • 13 Typed Tools (8 Operational + 5 Conversational) • Authoritative Multi-Turn Incident Context (`alexa/`) • Conversational Workflow with Deterministic Governance Gate • Prompt Injection Hardening • Remote Cloudflare Tunnel / Public HTTPS Deployment • Sub-500ms Read Tool Latency (<10ms local avg)
+Self-Hosted Streamable HTTP MCP Server (MCP Spec 2025-11-25) • 13 Typed Tools (8 Operational + 5 Conversational) • Alexa+ Compatible Conversational Simulation Workspace • Epistemic Evidence Categorization (`OBSERVED`, `INFERRED`, `PROPOSED`, `APPROVED`, `EXECUTED`, `VERIFIED`) • Governed Approval Gate • Independent Telemetry Verification • Live Multi-Turn Command Center UI • 123 Automated Tests Passing
 
 ---
 
@@ -288,7 +288,25 @@ python -m pytest tests/unit/test_alexa.py tests/unit/test_alexa_adapter.py -v
 
 # 2. Run Alexa+ integration tests (multi-turn lifecycle, prompt injection, latency benchmark)
 python -m pytest tests/integration/test_alexa_mcp.py -v
+
+# 3. Run Phase 8B Alexa+ Simulation tests (full golden path, approval gate, verification)
+python -m pytest tests/integration/test_alexa_simulation.py -v
 ```
+
+### Phase 8B — Alexa+ Conversational Simulation Experience
+
+For the Amazon AppDev Hackathon 2026, RALLY provides an **Alexa+ compatible conversational simulation workspace** within the dark command-center web interface:
+
+- **Truthful Architecture Disclosure**: This is a simulated Alexa+ voice-assistant experience backed 100% truthfully by RALLY's real FastAPI backend, Agentic Investigation, Streamable HTTP MCP server, Evidence Ledger, Governance Approval Gate, Controlled Execution, and Independent Verification. It does not claim connectivity to physical Alexa hardware or the Alexa+ Developer Console.
+- **Golden Path Flow**:
+  1. *User*: `"Investigate the checkout incident and recover it if the evidence supports a rollback."`
+  2. *Investigation*: RALLY queries service health (`DEGRADED`), error rate (`18.4%`), logs, deployments (`checkout-v42`), diffs, and downstream dependencies (`HEALTHY`).
+  3. *Epistemic Ledger*: Displays atomic evidence items strictly tagged as `OBSERVED`, `INFERRED`, `PROPOSED`, `APPROVED`, `EXECUTED`, or `VERIFIED`.
+  4. *Governance Gate*: Rollback requires human approval (Risk Score: 65, HIGH). Direct conversational rollback is blocked (`NOT_EXECUTED`).
+  5. *Human Approval*: Operator clicks `[APPROVE ROLLBACK]` (or confirms in dialogue). Preconditions are revalidated to eliminate TOCTOU race conditions.
+  6. *Execution*: Controlled executor invokes `rollback_deployment(checkout-v42)` via MCP.
+  7. *Independent Verification*: Verifier queries read-only telemetry; error rate recovers to `0.70%` (`HEALTHY`).
+  8. *Resolution*: Incident state transitions to `RESOLVED` only after independent verification passes.
 
 ### Public HTTPS & Alexa AI CLI Deployment
 
