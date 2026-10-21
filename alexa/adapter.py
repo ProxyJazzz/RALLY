@@ -197,7 +197,9 @@ class AlexaConversationalAdapter:
         )
         v_status = data.get("verification_status")
         rec_decision = data.get("recovery_decision")
-        err_rate = data.get("error_rate")
+        err_rate = data.get("measured_error_rate_pct")
+        if err_rate is None:
+            err_rate = data.get("error_rate")
         active_dep = data.get("active_deployment_id")
 
         if v_status == "PASSED" and rec_decision == "RESOLVED":

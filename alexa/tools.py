@@ -144,6 +144,7 @@ def register_alexa_conversational_tools(
                 execution_id=ctx.execution_id,
                 verification_status=ctx.verification_status or "PENDING",
                 recovery_decision=ctx.recovery_decision.value if ctx.recovery_decision else "PENDING",
+                measured_error_rate_pct=ctx.measured_error_rate_pct,
                 active_deployment_id=ctx.active_deployment_id,
                 dependencies_healthy=True,
                 summary=summary,

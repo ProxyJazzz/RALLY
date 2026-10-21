@@ -58,6 +58,7 @@ class ConversationalIncidentContext(BaseModel):
     execution_id: str | None = None
     verification_status: str | None = None
     recovery_decision: RecoveryDecision | None = None
+    measured_error_rate_pct: float | None = None
     created_at: str = ""
     updated_at: str = ""
 

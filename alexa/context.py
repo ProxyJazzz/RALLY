@@ -113,6 +113,11 @@ class IncidentContextManager:
                 "execution_status": result.execution_record.status.value,
                 "verification_status": verif_status,
                 "recovery_decision": result.recovery_decision,
+                "measured_error_rate_pct": (
+                    result.verification_report.measured_error_rate_pct
+                    if result.verification_report
+                    else None
+                ),
                 "state": state,
                 "active_deployment_id": (
                     result.verification_report.active_deployment_id
