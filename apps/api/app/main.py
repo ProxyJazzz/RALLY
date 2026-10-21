@@ -70,6 +70,8 @@ def create_app() -> FastAPI:
 
     # ── Routers ──────────────────────────────────────────────────────────────
     app.include_router(health_router.router)
+    from app.api.routes import alexa_simulation as alexa_router
+    app.include_router(alexa_router.router)
 
     return app
 
