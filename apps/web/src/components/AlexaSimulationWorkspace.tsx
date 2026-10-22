@@ -4,10 +4,13 @@ import {
   AlexaSimulationState,
   ChatMessageResponse,
 } from '../api/client'
+import { IncidentHeader } from './IncidentHeader'
+import { IncidentJourney } from './IncidentJourney'
 import { ConversationalPanel } from './ConversationalPanel'
 import { InvestigationTimeline } from './InvestigationTimeline'
 import { EvidenceLedgerPanel } from './EvidenceLedgerPanel'
 import { GovernanceApprovalPanel } from './GovernanceApprovalPanel'
+import { HypothesisPanel } from './HypothesisPanel'
 
 interface Message {
   id: string
@@ -16,13 +19,19 @@ interface Message {
   timestamp: string
 }
 
-export const AlexaSimulationWorkspace: React.FC = () => {
+interface AlexaSimulationWorkspaceProps {
+  onIncidentStateChange?: (hasIncident: boolean) => void
+}
+
+export const AlexaSimulationWorkspace: React.FC<AlexaSimulationWorkspaceProps> = ({
+  onIncidentStateChange,
+}) => {
   const [state, setState] = useState<AlexaSimulationState | null>(null)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg-init',
       sender: 'assistant',
-      text: "RALLY Alexa+ conversational simulation initialized. Speak or type 'Investigate the checkout incident' to begin.",
+      text: "RALLY Incident Command System online. Telemetry monitoring checkout-service. Enter 'Investigate the checkout incident' or select a quick command below.",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     },
   ])
@@ -33,6 +42,8 @@ export const AlexaSimulationWorkspace: React.FC = () => {
     const res = await apiClient.getAlexaState()
     if (res.ok) {
       setState(res.data)
+      const hasActive = res.data.state !== 'IDLE' && res.data.state !== 'RESOLVED'
+      onIncidentStateChange?.(hasActive)
     }
   }
 
@@ -64,6 +75,8 @@ export const AlexaSimulationWorkspace: React.FC = () => {
       }
       setMessages((prev) => [...prev, asstMsg])
       setState(data.snapshot)
+      const hasActive = data.snapshot.state !== 'IDLE' && data.snapshot.state !== 'RESOLVED'
+      onIncidentStateChange?.(hasActive)
     } else {
       setError(res.error)
       const errReply: Message = {
@@ -91,6 +104,8 @@ export const AlexaSimulationWorkspace: React.FC = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       }
       setMessages((prev) => [...prev, asstMsg])
+      const hasActive = res.data.state !== 'IDLE' && res.data.state !== 'RESOLVED'
+      onIncidentStateChange?.(hasActive)
     } else {
       setError(res.error)
     }
@@ -126,55 +141,44 @@ export const AlexaSimulationWorkspace: React.FC = () => {
         {
           id: `reset-${Date.now()}`,
           sender: 'assistant',
-          text: 'Simulation reset. Fault CHECKOUT_REGRESSION injected into operational world (checkout-v42 active, ~18.4% error rate).',
+          text: 'Simulation reset. Operational fault CHECKOUT_REGRESSION primed in simulator (checkout-v42 active, ~18.4% error rate).',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         },
       ])
+      onIncidentStateChange?.(false)
     }
   }
 
+  const handleStartInvestigation = () => {
+    void handleSendMessage('Investigate the checkout incident.')
+  }
+
   const activeState = state?.state ?? 'IDLE'
+  const isIdle = activeState === 'IDLE'
+
+  // Numerical error rate from verification or standard incident value
+  const numericErrorRate =
+    state?.execution_verification?.verification_status === 'PASSED'
+      ? (state.execution_verification.verified_error_rate ?? 0.7)
+      : isIdle
+      ? null
+      : 18.4
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* ── Status Banner ────────────────────────────────────────────── */}
-      <div className="bg-rally-surface border border-rally-border rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded bg-rally-info/10 border border-rally-info/30">
-            <span className="text-rally-info font-mono font-bold text-base">A+</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-rally-text text-sm sm:text-base tracking-wide">
-                Alexa+ Simulation Workspace
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rally-info/10 text-rally-info border border-rally-info/30 uppercase">
-                Simulated Voice Surface
-              </span>
-            </div>
-            <p className="text-xs text-rally-secondary font-sans mt-0.5">
-              Backed by real RALLY backend, Agentic Investigation, Streamable HTTP MCP, and Governance.
-            </p>
-          </div>
-        </div>
+    <div className="flex flex-col gap-4">
+      {/* 1. Main Incident Header */}
+      <IncidentHeader
+        state={activeState}
+        serviceId={state?.service_id ?? 'checkout-service'}
+        activeDeployment={state?.active_deployment ?? 'checkout-v42'}
+        errorRate={numericErrorRate}
+        onInvestigate={handleStartInvestigation}
+        onReset={handleReset}
+        isProcessing={isProcessing}
+      />
 
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-rally-muted">Active Service:</span>
-            <span className="text-xs font-mono font-semibold text-rally-text bg-rally-graphite px-2 py-1 rounded border border-rally-border">
-              {state?.service_id ?? 'checkout-service'} ({state?.active_deployment ?? 'checkout-v42'})
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={isProcessing}
-            className="text-xs font-mono text-rally-secondary hover:text-rally-text bg-rally-graphite border border-rally-border px-3 py-1.5 rounded transition-colors"
-          >
-            Reset Fault
-          </button>
-        </div>
-      </div>
+      {/* 2. Visual Incident Journey: Understand -> Investigate -> Reason -> Plan -> Approve -> Execute -> Verify -> Resolve */}
+      <IncidentJourney state={activeState} />
 
       {error && (
         <div className="p-3 rounded bg-rally-critical/10 border border-rally-critical/30 text-xs font-mono text-rally-critical">
@@ -182,28 +186,37 @@ export const AlexaSimulationWorkspace: React.FC = () => {
         </div>
       )}
 
-      {/* ── Workspace 2-Column Grid ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Conversational Voice Panel */}
+      {/* 3. Operational Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Column: Copilot Operations Console */}
         <div className="lg:col-span-5 flex flex-col">
           <ConversationalPanel
             messages={messages}
             onSendMessage={handleSendMessage}
             isProcessing={isProcessing}
+            state={activeState}
+            confidence={state?.confidence}
           />
         </div>
 
-        {/* Right Column: Timelines, Governance & Evidence */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          {/* Top: Timeline & Governance */}
+        {/* Right Column: Evidence, Hypotheses, Timeline, Change Control */}
+        <div className="lg:col-span-7 flex flex-col gap-4">
+          {/* Top row: Hypotheses & Change Control */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InvestigationTimeline
-              timeline={state?.timeline ?? []}
+            <HypothesisPanel
+              primaryHypothesis={state?.primary_hypothesis}
+              confidence={state?.confidence}
               state={activeState}
             />
+
             <GovernanceApprovalPanel
               plan={state?.action_plan}
-              execVerif={state?.execution_verification ?? { execution_status: 'NOT_EXECUTED', verification_status: 'PENDING' }}
+              execVerif={
+                state?.execution_verification ?? {
+                  execution_status: 'NOT_EXECUTED',
+                  verification_status: 'PENDING',
+                }
+              }
               state={activeState}
               onApprove={handleApprove}
               onReject={handleReject}
@@ -211,7 +224,13 @@ export const AlexaSimulationWorkspace: React.FC = () => {
             />
           </div>
 
-          {/* Bottom: Evidence Ledger */}
+          {/* Operational Timeline */}
+          <InvestigationTimeline
+            timeline={state?.timeline ?? []}
+            state={activeState}
+          />
+
+          {/* Evidence Ledger */}
           <EvidenceLedgerPanel evidence={state?.evidence ?? []} />
         </div>
       </div>

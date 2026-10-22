@@ -1,93 +1,73 @@
 import React from 'react'
-import { EpistemicLabel, EvidenceItem } from '../api/client'
+import { EvidenceItem, EpistemicLabel } from '../api/client'
 
 interface EvidenceLedgerPanelProps {
   evidence: EvidenceItem[]
 }
 
-const labelStyles: Record<EpistemicLabel, { bg: string; text: string; border: string }> = {
-  OBSERVED: {
-    bg: 'bg-rally-info/10',
-    text: 'text-rally-info',
-    border: 'border-rally-info/30',
-  },
-  INFERRED: {
-    bg: 'bg-rally-warning/10',
-    text: 'text-rally-warning',
-    border: 'border-rally-warning/30',
-  },
-  PROPOSED: {
-    bg: 'bg-purple-500/10',
-    text: 'text-purple-400',
-    border: 'border-purple-500/30',
-  },
-  APPROVED: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/30',
-  },
-  EXECUTED: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
-  },
-  VERIFIED: {
-    bg: 'bg-rally-healthy/10',
-    text: 'text-rally-healthy',
-    border: 'border-rally-healthy/30',
-  },
-}
-
 export const EvidenceLedgerPanel: React.FC<EvidenceLedgerPanelProps> = ({ evidence }) => {
+  const getEpistemicBadge = (label: EpistemicLabel) => {
+    switch (label) {
+      case 'OBSERVED':
+        return 'bg-rally-surface border-rally-border text-rally-secondary'
+      case 'INFERRED':
+        return 'bg-rally-blue/15 border-rally-blue/40 text-rally-blue'
+      case 'PROPOSED':
+        return 'bg-rally-amber/15 border-rally-amber/40 text-rally-amber'
+      case 'APPROVED':
+        return 'bg-rally-amber/25 border-rally-amber/50 text-rally-amber font-bold'
+      case 'EXECUTED':
+      case 'VERIFIED':
+        return 'bg-rally-green/15 border-rally-green/40 text-rally-green font-bold'
+      default:
+        return 'bg-rally-surface border-rally-border text-rally-muted'
+    }
+  }
+
   return (
-    <div className="bg-rally-surface border border-rally-border rounded-lg p-4 flex flex-col h-full">
-      <div className="flex items-center justify-between pb-3 border-b border-rally-border mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-rally-warning" />
-          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-rally-text">
-            Evidence Ledger & Reasoning
+    <div className="bg-rally-surface border border-rally-border rounded p-3 select-none flex flex-col justify-between font-mono">
+      <div className="flex items-center justify-between pb-1.5 border-b border-rally-border text-[10px] uppercase text-rally-muted tracking-wider">
+        <span className="flex items-center gap-1.5">
+          <span>EVIDENCE LEDGER & EPISTEMIC STREAM</span>
+          <span className="text-rally-cyan bg-rally-cyan/10 border border-rally-cyan/25 px-1 py-0.2 rounded-sm">
+            {evidence.length} ITEMS
           </span>
-        </div>
-        <span className="text-[10px] font-mono text-rally-muted">
-          Strict Epistemic Classification
         </span>
+        <span className="text-rally-secondary">PROVENANCE CLASSIFIED</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[360px]">
+      <div className="flex-1 overflow-y-auto max-h-[220px] space-y-1.5 py-1.5 pr-1">
         {evidence.length === 0 ? (
-          <div className="text-xs font-mono text-rally-muted py-6 text-center">
-            Evidence ledger empty. Awaiting investigative tool invocations.
+          <div className="py-8 text-center text-xs text-rally-muted">
+            No evidence gathered yet. Telemetry monitoring idle.
           </div>
         ) : (
-          evidence.map((item) => {
-            const style = labelStyles[item.label] ?? labelStyles.OBSERVED
-            return (
-              <div
-                key={item.evidence_id}
-                className="p-2.5 rounded bg-rally-graphite border border-rally-border flex flex-col gap-1.5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}
-                    >
-                      {item.label}
-                    </span>
-                    <span className="text-xs font-mono text-rally-text font-medium">
-                      {item.evidence_id}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-rally-muted">{item.timestamp}</span>
+          evidence.map((item, idx) => (
+            <div
+              key={item.evidence_id || idx}
+              className="p-2 rounded-sm bg-rally-bg border border-rally-border hover:border-rally-border-subtle flex flex-col gap-1 text-[11px]"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rally-cyan" />
+                  <span className="text-[10px] text-rally-muted">{item.timestamp}</span>
+                  <span className="text-rally-text font-semibold uppercase text-[10px]">
+                    {item.source_tool.replace('get_', '').replace('_', ' ')}
+                  </span>
                 </div>
-                <p className="text-xs text-rally-secondary font-sans leading-relaxed">
-                  {item.description}
-                </p>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-rally-muted">
-                  <span>Source: {item.source_tool}</span>
-                </div>
+                <span
+                  className={`text-[9px] px-1.5 py-0.2 rounded-sm border uppercase tracking-wider ${getEpistemicBadge(
+                    item.label
+                  )}`}
+                >
+                  {item.label}
+                </span>
               </div>
-            )
-          })
+              <p className="text-rally-secondary text-xs font-sans pl-3 leading-snug">
+                {item.description}
+              </p>
+            </div>
+          ))
         )}
       </div>
     </div>

@@ -6,64 +6,65 @@ interface InvestigationTimelineProps {
   state: string
 }
 
-export const InvestigationTimeline: React.FC<InvestigationTimelineProps> = ({ timeline, state }) => {
+export const InvestigationTimeline: React.FC<InvestigationTimelineProps> = ({
+  timeline,
+  state,
+}) => {
   return (
-    <div className="bg-rally-surface border border-rally-border rounded-lg p-4 flex flex-col h-full">
-      <div className="flex items-center justify-between pb-3 border-b border-rally-border mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-rally-info" />
-          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-rally-text">
-            Investigation & Execution Timeline
-          </span>
-        </div>
-        <span className="text-xs font-mono text-rally-info bg-rally-info/10 px-2 py-0.5 rounded border border-rally-info/20">
-          STATE: {state}
-        </span>
+    <div className="bg-rally-surface border border-rally-border rounded p-3 flex flex-col h-full min-h-[260px]">
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-rally-border text-[10px] font-mono uppercase text-rally-muted tracking-wider">
+        <span>INVESTIGATION TIMELINE</span>
+        <span className="text-rally-secondary">{timeline.length} EVENTS</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[360px]">
+      <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[300px] pr-1">
         {timeline.length === 0 ? (
-          <div className="text-xs font-mono text-rally-muted py-6 text-center">
-            No active investigation. Trigger an investigation to observe real-time operational telemetry.
+          <div className="text-rally-muted text-xs font-mono py-8 text-center">
+            {state === 'IDLE' ? 'No active investigation. Telemetry monitoring idle.' : 'Awaiting timeline events…'}
           </div>
         ) : (
-          timeline.map((step) => (
-            <div key={step.step_id} className="flex items-start gap-3 text-xs font-mono">
-              <div className="mt-0.5">
-                {step.status === 'completed' && (
-                  <span className="w-4 h-4 rounded-full bg-rally-healthy/15 text-rally-healthy border border-rally-healthy/30 flex items-center justify-center text-[10px]">
-                    ✓
-                  </span>
-                )}
-                {step.status === 'in_progress' && (
-                  <span className="w-4 h-4 rounded-full bg-rally-info/15 text-rally-info border border-rally-info/30 flex items-center justify-center text-[10px] animate-pulse">
-                    ●
-                  </span>
-                )}
-                {step.status === 'failed' && (
-                  <span className="w-4 h-4 rounded-full bg-rally-critical/15 text-rally-critical border border-rally-critical/30 flex items-center justify-center text-[10px]">
-                    ✕
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-rally-text font-medium truncate">{step.title}</span>
-                  <span className="text-[10px] text-rally-muted">{step.timestamp}</span>
+          timeline.map((step, idx) => {
+            const isCompleted = step.status === 'completed'
+            const isInProgress = step.status === 'in_progress'
+
+            return (
+              <div key={step.step_id || idx} className="flex items-start gap-2 text-xs font-mono">
+                <span className="text-rally-muted text-[10px] shrink-0 pt-0.5 min-w-[56px]">
+                  {step.timestamp}
+                </span>
+
+                <div className="flex items-center gap-1.5 shrink-0 pt-1">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isCompleted
+                        ? 'bg-rally-green'
+                        : isInProgress
+                        ? 'bg-rally-blue animate-pulse'
+                        : 'bg-rally-muted'
+                    }`}
+                  />
                 </div>
-                {step.tool_called && (
-                  <span className="inline-block mt-0.5 text-[10px] px-1.5 py-0.2 rounded bg-rally-graphite text-rally-info border border-rally-border">
-                    tool: {step.tool_called}
-                  </span>
-                )}
-                {step.detail && (
-                  <p className="mt-1 text-[11px] text-rally-secondary leading-relaxed font-sans">
-                    {step.detail}
-                  </p>
-                )}
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-rally-text font-medium text-xs">
+                      {step.title}
+                    </span>
+                    {step.tool_called && (
+                      <span className="px-1.5 py-0.2 rounded-sm text-[9px] bg-rally-bg border border-rally-border text-rally-blue">
+                        mcp::{step.tool_called}
+                      </span>
+                    )}
+                  </div>
+                  {step.detail && (
+                    <p className="text-[11px] text-rally-secondary font-mono mt-0.5 leading-snug">
+                      {step.detail}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>

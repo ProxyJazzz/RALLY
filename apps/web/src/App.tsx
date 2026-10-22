@@ -1,131 +1,453 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useHealth } from './hooks/useHealth'
-import { StatusCard } from './components/StatusCard'
-import { AlexaSimulationWorkspace } from './components/AlexaSimulationWorkspace'
+import { GlobalHeader } from './components/GlobalHeader'
+import { NavigationRail, SidebarBadges } from './components/NavigationRail'
+import { SystemStatusBar } from './components/SystemStatusBar'
+import { ConversationalPanel } from './components/ConversationalPanel'
+import { OverviewView } from './views/OverviewView'
+import { IncidentView } from './views/IncidentView'
+import { EvidenceView } from './views/EvidenceView'
+import { TimelineView } from './views/TimelineView'
+import { HypothesesView } from './views/HypothesesView'
+import { ActionPlanView } from './views/ActionPlanView'
+import { ApprovalView } from './views/ApprovalView'
+import { ExecutionView } from './views/ExecutionView'
+import { ServicesView } from './views/ServicesView'
+import { MCPView } from './views/MCPView'
+import { DatabaseView } from './views/DatabaseView'
+import {
+  apiClient,
+  AlexaSimulationState,
+  ChatMessageResponse,
+} from './api/client'
+
+interface Message {
+  id: string
+  sender: 'user' | 'assistant'
+  text: string
+  timestamp: string
+}
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'alexa' | 'system'>('alexa')
-  const { apiStatus, dbStatus, api, database, apiError, dbError, lastChecked, refresh } = useHealth(15000)
+  // ── 1. ROUTING & BROWSER HISTORY ──────────────────────────────────────
+  const getInitialPath = (): string => {
+    const path = window.location.pathname
+    const validPaths = [
+      '/overview',
+      '/incident',
+      '/evidence',
+      '/timeline',
+      '/hypotheses',
+      '/action-plan',
+      '/approval',
+      '/execution',
+      '/services',
+      '/mcp',
+      '/database',
+    ]
+    return validPaths.includes(path) ? path : '/overview'
+  }
 
-  const lastCheckedStr = lastChecked
-    ? lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    : null
+  const [currentPath, setCurrentPath] = useState<string>(getInitialPath)
+
+  const handleNavigate = useCallback((path: string) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path)
+    }
+    setCurrentPath(path)
+  }, [])
+
+  useEffect(() => {
+    const onPopState = () => {
+      const path = window.location.pathname
+      setCurrentPath(path === '/' ? '/overview' : path)
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  // ── 2. AUTHORITATIVE RALLY STATE ──────────────────────────────────────
+  const [state, setState] = useState<AlexaSimulationState | null>(null)
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'msg-init',
+      sender: 'assistant',
+      text: "RALLY Operations Cockpit initialized. Incident 4821 telemetry active on checkout-service. Enter 'Investigate incident' to begin autonomous root-cause deduction.",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    },
+  ])
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [apiError, setApiErrorState] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const {
+    apiStatus,
+    dbStatus,
+    api,
+    database,
+    apiError: healthApiError,
+    dbError,
+    lastChecked,
+    refresh,
+  } = useHealth(15000)
+
+  // Fetch initial simulator snapshot
+  const fetchState = useCallback(async () => {
+    setIsLoading(true)
+    const res = await apiClient.getAlexaState()
+    setIsLoading(false)
+    if (res.ok) {
+      setState(res.data)
+      setApiErrorState(null)
+    } else {
+      setApiErrorState(res.error)
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchState()
+  }, [fetchState])
+
+  // Chat message sender
+  const handleSendMessage = async (text: string) => {
+    const userMsg: Message = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    }
+    setMessages((prev) => [...prev, userMsg])
+    setIsProcessing(true)
+    setApiErrorState(null)
+
+    const res = await apiClient.sendAlexaChat(text)
+    setIsProcessing(false)
+
+    if (res.ok) {
+      const data: ChatMessageResponse = res.data
+      const asstMsg: Message = {
+        id: `asst-${Date.now()}`,
+        sender: 'assistant',
+        text: data.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      }
+      setMessages((prev) => [...prev, asstMsg])
+      setState(data.snapshot)
+    } else {
+      setApiErrorState(res.error)
+      const errReply: Message = {
+        id: `asst-err-${Date.now()}`,
+        sender: 'assistant',
+        text: `Error executing via MCP: ${res.error}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      }
+      setMessages((prev) => [...prev, errReply])
+    }
+  }
+
+  // Governance Approval handler
+  const handleApprove = async () => {
+    setIsProcessing(true)
+    setApiErrorState(null)
+    const res = await apiClient.submitAlexaApproval('APPROVE')
+    setIsProcessing(false)
+
+    if (res.ok) {
+      setState(res.data)
+      const asstMsg: Message = {
+        id: `asst-${Date.now()}`,
+        sender: 'assistant',
+        text: res.data.last_assistant_speech ?? 'Rollback authorized and executed.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      }
+      setMessages((prev) => [...prev, asstMsg])
+    } else {
+      setApiErrorState(res.error)
+    }
+  }
+
+  // Governance Rejection handler
+  const handleReject = async () => {
+    setIsProcessing(true)
+    setApiErrorState(null)
+    const res = await apiClient.submitAlexaApproval('REJECT')
+    setIsProcessing(false)
+
+    if (res.ok) {
+      setState(res.data)
+      const asstMsg: Message = {
+        id: `asst-${Date.now()}`,
+        sender: 'assistant',
+        text: res.data.last_assistant_speech ?? 'Rollback plan rejected.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      }
+      setMessages((prev) => [...prev, asstMsg])
+    } else {
+      setApiErrorState(res.error)
+    }
+  }
+
+  // Simulation reset handler
+  const handleReset = async () => {
+    setIsProcessing(true)
+    setApiErrorState(null)
+    const res = await apiClient.resetAlexaSimulation()
+    setIsProcessing(false)
+    if (res.ok) {
+      setState(res.data)
+      setMessages([
+        {
+          id: `reset-${Date.now()}`,
+          sender: 'assistant',
+          text: 'Simulation reset. Operational fault CHECKOUT_REGRESSION primed in simulator (checkout-v42 active, ~18.4% error rate).',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        },
+      ])
+    } else {
+      setApiErrorState(res.error)
+    }
+  }
+
+  const activeState = state?.state ?? 'IDLE'
+  const isIdle = activeState === 'IDLE'
+  const isResolved =
+    activeState === 'RESOLVED' ||
+    state?.execution_verification?.verification_status === 'PASSED'
+  const hasActiveIncident = !isIdle && !isResolved
+  const hasApprovalRequired = activeState === 'AWAITING_APPROVAL'
+
+  const numericErrorRate = isResolved ? 0.7 : 18.4
+
+  // Dynamic sidebar badges calculated from actual state
+  const badges: SidebarBadges = {
+    incident: isResolved ? 'RESOLVED' : isIdle ? '—' : 'SEV-2',
+    incidentColor: isResolved ? 'green' : isIdle ? 'gray' : 'red',
+    evidenceCount: state?.evidence?.length ?? 0,
+    timelineCount: state?.timeline?.length ?? 0,
+    approval: hasApprovalRequired ? 'REQUIRED' : isResolved ? 'APPROVED' : undefined,
+    approvalColor: hasApprovalRequired ? 'amber' : 'green',
+    execution: isResolved ? 'VERIFIED' : state?.execution_verification?.execution_status === 'EXECUTED' ? 'EXECUTED' : undefined,
+    executionColor: isResolved ? 'green' : 'blue',
+    services: isResolved ? 'HEALTHY' : '1 DEGRADED',
+    servicesColor: isResolved ? 'green' : 'red',
+    mcp: 'CONNECTED',
+  }
+
+  // Render active workspace view
+  const renderWorkspaceView = () => {
+    if (isLoading && !state) {
+      return (
+        <div className="bg-rally-surface border border-rally-border rounded p-12 text-center font-mono">
+          <div className="text-rally-cyan text-sm uppercase animate-pulse">
+            LOADING INCIDENT STATE FROM RALLY BACKEND...
+          </div>
+          <p className="text-xs text-rally-secondary mt-1">
+            Connecting to Streamable HTTP MCP server and PostgreSQL state storage.
+          </p>
+        </div>
+      )
+    }
+
+    if (apiError && !state) {
+      return (
+        <div className="bg-rally-surface border border-rally-red/40 rounded p-12 text-center font-mono space-y-3">
+          <div className="text-rally-red text-sm font-bold uppercase">
+            RALLY BACKEND UNAVAILABLE ({apiError})
+          </div>
+          <p className="text-xs text-rally-secondary font-sans">
+            Unable to connect to FastAPI endpoint at http://localhost:8000. Please verify the API server process is running.
+          </p>
+          <button
+            onClick={() => void fetchState()}
+            className="px-4 py-2 rounded bg-rally-bg border border-rally-border hover:border-rally-cyan text-xs text-rally-cyan font-bold"
+          >
+            RETRY CONNECTION
+          </button>
+        </div>
+      )
+    }
+
+    switch (currentPath) {
+      case '/incident':
+        return (
+          <IncidentView
+            state={state}
+            activeState={activeState}
+            isProcessing={isProcessing}
+            numericErrorRate={numericErrorRate}
+            isResolved={isResolved}
+            onInvestigate={() => void handleSendMessage('Investigate the checkout incident.')}
+            onReset={handleReset}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/evidence':
+        return (
+          <EvidenceView
+            evidence={state?.evidence ?? []}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/timeline':
+        return (
+          <TimelineView
+            timeline={state?.timeline ?? []}
+            activeState={activeState}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/hypotheses':
+        return (
+          <HypothesesView
+            primaryHypothesis={state?.primary_hypothesis}
+            confidence={state?.confidence}
+            state={activeState}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/action-plan':
+        return (
+          <ActionPlanView
+            plan={state?.action_plan}
+            state={activeState}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/approval':
+        return (
+          <ApprovalView
+            plan={state?.action_plan}
+            state={activeState}
+            isProcessing={isProcessing}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/execution':
+        return (
+          <ExecutionView
+            plan={state?.action_plan}
+            execVerif={
+              state?.execution_verification ?? {
+                execution_status: 'NOT_EXECUTED',
+                verification_status: 'PENDING',
+              }
+            }
+            state={activeState}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/services':
+        return (
+          <ServicesView
+            activeDeployment={state?.active_deployment ?? 'checkout-v42'}
+            isRecovered={isResolved}
+            errorRate={numericErrorRate}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/mcp':
+        return (
+          <MCPView
+            state={activeState}
+            isProcessing={isProcessing}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/database':
+        return (
+          <DatabaseView
+            apiStatus={apiStatus}
+            dbStatus={dbStatus}
+            api={api}
+            database={database}
+            apiError={healthApiError}
+            dbError={dbError}
+            lastChecked={lastChecked}
+            refresh={refresh}
+            onNavigate={handleNavigate}
+          />
+        )
+
+      case '/overview':
+      default:
+        return (
+          <OverviewView
+            state={state}
+            activeState={activeState}
+            isProcessing={isProcessing}
+            numericErrorRate={numericErrorRate}
+            isResolved={isResolved}
+            onInvestigate={() => void handleSendMessage('Investigate the checkout incident.')}
+            onReset={handleReset}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onNavigate={handleNavigate}
+          />
+        )
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-rally-charcoal text-rally-text flex flex-col">
+    <div className="h-screen w-screen overflow-hidden bg-rally-bg text-rally-text flex flex-col font-sans bg-command-grid">
+      {/* ── 1. GLOBAL HEADER ────────────────────────────────────────── */}
+      <GlobalHeader
+        hasActiveIncident={hasActiveIncident || isIdle}
+        activeIncidentLabel="CHECKOUT REGRESSION"
+        incidentId="4821"
+        apiHealthy={apiStatus === 'success'}
+      />
 
-      {/* ── Top bar ─────────────────────────────────────────────────── */}
-      <header className="border-b border-rally-border bg-rally-black px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded bg-rally-info/10 border border-rally-info/30">
-              <span className="text-rally-info font-mono font-bold text-sm">R</span>
+      {/* ── 2. THREE-ZONE COCKPIT SHELL ─────────────────────────────── */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        {/* ZONE 1: LEFT NAVIGATION RAIL (210px) */}
+        <NavigationRail
+          currentPath={currentPath}
+          onNavigate={handleNavigate}
+          badges={badges}
+        />
+
+        {/* ZONE 2: PRIMARY WORKSPACE (CENTER DOMINANT) */}
+        <main className="flex-1 p-3 overflow-y-auto min-w-0">
+          {apiError && state && (
+            <div className="mb-3 p-2.5 rounded bg-rally-red/10 border border-rally-red/30 text-xs font-mono text-rally-red flex items-center justify-between">
+              <span>{apiError}</span>
+              <button
+                onClick={() => setApiErrorState(null)}
+                className="text-xs text-rally-muted hover:text-rally-text px-1"
+              >
+                ✕
+              </button>
             </div>
-            <div>
-              <span className="font-semibold text-rally-text tracking-wide">RALLY</span>
-              <span className="ml-2 text-rally-muted text-xs font-mono hidden md:inline">
-                Agentic Reliability & Response Orchestration
-              </span>
-            </div>
-          </div>
-
-          {/* Navigation tabs */}
-          <nav className="flex items-center gap-2 text-xs font-mono">
-            <button
-              type="button"
-              id="tab-alexa-btn"
-              onClick={() => setActiveTab('alexa')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                activeTab === 'alexa'
-                  ? 'bg-rally-info/20 text-rally-info border border-rally-info/40 font-semibold'
-                  : 'text-rally-secondary hover:text-rally-text bg-rally-graphite/40'
-              }`}
-            >
-              Alexa+ Simulation
-            </button>
-            <button
-              type="button"
-              id="tab-system-btn"
-              onClick={() => setActiveTab('system')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                activeTab === 'system'
-                  ? 'bg-rally-info/20 text-rally-info border border-rally-info/40 font-semibold'
-                  : 'text-rally-secondary hover:text-rally-text bg-rally-graphite/40'
-              }`}
-            >
-              System Health
-            </button>
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-rally-healthy/10 text-rally-healthy border border-rally-healthy/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-rally-healthy animate-pulse" />
-            SYSTEM ONLINE
-          </span>
-          {activeTab === 'system' && lastCheckedStr && (
-            <span className="text-rally-muted text-xs font-mono hidden md:inline">
-              Last checked: {lastCheckedStr}
-            </span>
           )}
-          {activeTab === 'system' && (
-            <button
-              id="refresh-btn"
-              onClick={() => void refresh()}
-              disabled={apiStatus === 'loading'}
-              className="text-xs text-rally-info border border-rally-info/30 rounded px-3 py-1.5 hover:bg-rally-info/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-mono"
-            >
-              {apiStatus === 'loading' ? 'Refreshing…' : 'Refresh'}
-            </button>
-          )}
-        </div>
-      </header>
+          {renderWorkspaceView()}
+        </main>
 
-      {/* ── Main content ─────────────────────────────────────────────── */}
-      <main className="flex-1 px-4 sm:px-6 py-6 max-w-7xl mx-auto w-full">
-        {activeTab === 'alexa' ? (
-          <AlexaSimulationWorkspace />
-        ) : (
-          <div>
-            {/* Page title */}
-            <div className="mb-6">
-              <h1 className="text-xl font-semibold text-rally-text mb-1">System Status</h1>
-              <p className="text-rally-secondary text-xs">
-                Real-time API and PostgreSQL infrastructure health
-              </p>
-            </div>
+        {/* ZONE 3: RALLY COPILOT (RIGHT ZONE, 350px) */}
+        <ConversationalPanel
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isProcessing={isProcessing}
+          state={activeState}
+          confidence={state?.confidence}
+        />
+      </div>
 
-            {/* Status grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <StatusCard
-                label="API Server"
-                status={apiStatus}
-                serviceStatus={api?.status}
-                value={api ? `${api.service} v${api.version}` : undefined}
-                detail={api ? `Environment: ${api.environment}` : undefined}
-                error={apiError}
-              />
-
-              <StatusCard
-                label="Database"
-                status={dbStatus}
-                serviceStatus={database?.status}
-                value={database ? database.database : undefined}
-                detail={database ? `Environment: ${database.environment}` : undefined}
-                latencyMs={database?.latency_ms}
-                error={dbError ?? database?.error}
-              />
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* ── Footer ──────────────────────────────────────────────────── */}
-      <footer className="border-t border-rally-border px-6 py-3 flex items-center justify-between text-rally-muted text-xs font-mono">
-        <span>RALLY v0.1.0</span>
-        <span>Amazon AI Hackathon 2026</span>
-      </footer>
-
+      {/* ── 3. SYSTEM STATUS BAR ─────────────────────────────────────── */}
+      <SystemStatusBar
+        apiStatus={apiStatus === 'success' ? 'healthy' : 'degraded'}
+        dbStatus={dbStatus === 'success' ? 'healthy' : 'degraded'}
+      />
     </div>
   )
 }

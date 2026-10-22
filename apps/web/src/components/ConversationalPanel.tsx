@@ -4,12 +4,16 @@ interface ConversationalPanelProps {
   messages: Array<{ id: string; sender: 'user' | 'assistant'; text: string; timestamp: string }>
   onSendMessage: (msg: string) => void
   isProcessing: boolean
+  state: string
+  confidence?: number
 }
 
 export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
   messages,
   onSendMessage,
   isProcessing,
+  state,
+  confidence = 0,
 }) => {
   const [input, setInput] = useState('')
 
@@ -20,95 +24,167 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
     setInput('')
   }
 
-  const promptSuggestions = [
-    'Investigate the checkout incident.',
-    'What did you find?',
-    'Why do you think the deployment caused it?',
-    'Should we roll it back?',
-    'Is the service healthy now?',
+  const quickCommands = [
+    { label: 'Investigate incident', prompt: 'Investigate the checkout incident.' },
+    { label: 'Explain root cause', prompt: 'Explain the root cause and why checkout-v42 is failing.' },
+    { label: 'Show evidence', prompt: 'Show the evidence collected from telemetry and deployments.' },
+    { label: 'Prepare rollback', prompt: 'Prepare a rollback to checkout-v41.' },
+    { label: 'Check service health', prompt: 'Check current checkout-service health and error rate.' },
   ]
 
+  const isInvestigated = state !== 'IDLE'
+  const isAwaitingApproval = state === 'AWAITING_APPROVAL'
+
   return (
-    <div className="flex flex-col h-full bg-rally-surface border border-rally-border rounded-lg overflow-hidden">
-      {/* Panel header */}
-      <div className="px-4 py-3 border-b border-rally-border bg-rally-graphite flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-rally-info pulse-dot" />
-          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-rally-text">
-            Alexa+ Conversational Interface (Simulated)
-          </span>
+    <div className="w-full lg:w-[350px] shrink-0 bg-rally-surface border-l border-rally-border flex flex-col h-full min-h-[500px] select-none">
+      {/* 1. Header */}
+      <div className="px-3.5 py-2.5 border-b border-rally-border bg-rally-bg-alt flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold tracking-wider text-rally-text uppercase">
+              RALLY COPILOT
+            </span>
+            <span className="flex items-center gap-1 text-[10px] font-mono text-rally-green font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-rally-green animate-pulse" />
+              AGENT ACTIVE
+            </span>
+          </div>
+          <div className="text-[10px] font-mono text-rally-cyan mt-0.5">
+            MCP / STREAMABLE HTTP
+          </div>
         </div>
-        <span className="text-[10px] font-mono text-rally-muted border border-rally-border px-2 py-0.5 rounded">
-          MCP Streamable HTTP
-        </span>
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 min-h-[320px] max-h-[460px]">
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
-          >
-            <div className="flex items-center gap-1.5 mb-1 text-[11px] font-mono text-rally-muted">
-              <span>{m.sender === 'user' ? 'You (Operator)' : 'RALLY Assistant'}</span>
-              <span>•</span>
-              <span>{m.timestamp}</span>
+      {/* 2. Structured Operational Summary Cards */}
+      <div className="p-2.5 border-b border-rally-border bg-rally-bg space-y-2 font-mono text-[11px]">
+        {/* Current Objective */}
+        <div className="flex items-start justify-between">
+          <span className="text-[10px] text-rally-muted uppercase">OBJECTIVE</span>
+          <span className="text-rally-text font-medium text-right text-[10px]">
+            {state === 'RESOLVED' ? 'Incident Resolved' : 'Investigate checkout regression'}
+          </span>
+        </div>
+
+        {/* Current Activity */}
+        <div className="flex items-start justify-between border-t border-rally-border/60 pt-1.5">
+          <span className="text-[10px] text-rally-muted uppercase">ACTIVITY</span>
+          <div className="text-right text-[10px] space-y-0.5">
+            <div className="flex items-center justify-end gap-1 text-rally-green">
+              <span>● Telemetry collected</span>
             </div>
-            <div
-              className={`max-w-[88%] rounded-lg px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed ${
-                m.sender === 'user'
-                  ? 'bg-rally-info/15 text-rally-text border border-rally-info/30'
-                  : 'bg-rally-graphite text-rally-secondary border border-rally-border'
-              }`}
-            >
-              {m.text}
+            <div className={`flex items-center justify-end gap-1 ${isInvestigated ? 'text-rally-green' : 'text-rally-muted'}`}>
+              <span>{isInvestigated ? '● Deployment correlated' : '○ Deployment correlating'}</span>
+            </div>
+            <div className={`flex items-center justify-end gap-1 ${isAwaitingApproval || state === 'RESOLVED' ? 'text-rally-green' : 'text-rally-muted'}`}>
+              <span>{isAwaitingApproval || state === 'RESOLVED' ? '● Remediation prepared' : '○ Preparing remediation'}</span>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Finding & Confidence */}
+        {isInvestigated && (
+          <div className="bg-rally-surface border border-rally-border rounded p-2 text-[10px] space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-rally-muted uppercase">FINDING</span>
+              <span className="text-rally-cyan font-bold">{confidence > 0 ? Math.round(confidence * 100) : 91}% CONF</span>
+            </div>
+            <div className="text-rally-text font-medium text-[11px]">
+              Checkout deployment regression (v42)
+            </div>
+            <div className="text-rally-secondary text-[10px] pt-1 border-t border-rally-border/60">
+              RECOM: Rollback to checkout-v41 • RISK: <span className="text-rally-red font-bold">HIGH</span>
+            </div>
+            {isAwaitingApproval && (
+              <div className="text-rally-amber font-bold text-[10px] pt-0.5 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rally-amber animate-ping" />
+                HUMAN APPROVAL REQUIRED
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Messages Log */}
+      <div className="flex-1 p-3 overflow-y-auto space-y-3 min-h-[220px]">
+        {messages.map((m) => {
+          const isUser = m.sender === 'user'
+          return (
+            <div
+              key={m.id}
+              className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+            >
+              <div className="flex items-center gap-1 mb-1 text-[10px] font-mono text-rally-muted">
+                <span className={isUser ? 'text-rally-cyan' : 'text-rally-secondary'}>
+                  {isUser ? 'OPERATOR' : 'RALLY'}
+                </span>
+                <span>•</span>
+                <span>{m.timestamp}</span>
+              </div>
+              <div
+                className={`max-w-[92%] rounded-sm p-2.5 text-xs ${
+                  isUser
+                    ? 'bg-rally-cyan/10 text-rally-text border border-rally-cyan/30'
+                    : 'bg-rally-bg border border-rally-border text-rally-text font-sans leading-relaxed'
+                }`}
+              >
+                {m.text}
+              </div>
+            </div>
+          )
+        })}
+
         {isProcessing && (
           <div className="flex items-start flex-col">
-            <span className="text-[11px] font-mono text-rally-muted mb-1">RALLY Assistant • Thinking</span>
-            <div className="bg-rally-graphite border border-rally-border rounded-lg px-3.5 py-2.5 text-xs text-rally-info flex items-center gap-2 font-mono">
-              <span className="inline-block w-2 h-2 rounded-full bg-rally-info animate-ping" />
-              Investigating via Model Context Protocol...
+            <div className="text-[10px] font-mono text-rally-cyan mb-1">
+              RALLY • PROCESSING MCP TOOLS
+            </div>
+            <div className="bg-rally-bg border border-rally-border rounded-sm p-2 text-xs text-rally-cyan flex items-center gap-2 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-rally-cyan animate-ping" />
+              <span>Querying telemetry and deployment diffs via MCP...</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Suggested prompts */}
-      <div className="px-4 py-2 border-t border-rally-border/60 bg-rally-graphite/40 flex items-center gap-1.5 overflow-x-auto text-[11px]">
-        <span className="text-rally-muted font-mono whitespace-nowrap mr-1">Suggestions:</span>
-        {promptSuggestions.map((prompt, idx) => (
-          <button
-            key={idx}
-            type="button"
-            disabled={isProcessing}
-            onClick={() => onSendMessage(prompt)}
-            className="whitespace-nowrap px-2.5 py-1 rounded bg-rally-graphite border border-rally-border hover:border-rally-info/40 text-rally-secondary hover:text-rally-text transition-colors disabled:opacity-40"
-          >
-            "{prompt}"
-          </button>
-        ))}
+      {/* 4. Quick Commands */}
+      <div className="p-2 border-t border-rally-border bg-rally-bg-alt flex flex-col gap-1">
+        <div className="text-[9px] font-mono uppercase text-rally-muted tracking-wider">
+          QUICK COMMANDS:
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {quickCommands.map((cmd, idx) => (
+            <button
+              key={idx}
+              type="button"
+              disabled={isProcessing}
+              onClick={() => onSendMessage(cmd.prompt)}
+              className="px-2 py-0.5 rounded-sm bg-rally-surface border border-rally-border hover:border-rally-cyan/40 text-rally-secondary hover:text-rally-text text-[10px] font-mono transition-colors disabled:opacity-40"
+            >
+              {cmd.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Input area */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-rally-border bg-rally-graphite flex gap-2">
+      {/* 5. Command Input Form */}
+      <form
+        onSubmit={handleSubmit}
+        className="p-2.5 border-t border-rally-border bg-rally-surface flex gap-1.5"
+      >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={isProcessing}
-          placeholder="Speak or type a command (e.g. 'Investigate the checkout incident')..."
-          className="flex-1 bg-rally-charcoal border border-rally-border rounded px-3 py-2 text-xs text-rally-text placeholder:text-rally-muted focus:outline-none focus:border-rally-info font-sans"
+          placeholder="Ask RALLY..."
+          className="flex-1 bg-rally-bg border border-rally-border rounded-sm px-2.5 py-1.5 text-xs text-rally-text placeholder:text-rally-muted focus:outline-none focus:border-rally-cyan font-mono"
         />
         <button
           type="submit"
           disabled={isProcessing || !input.trim()}
-          className="px-4 py-2 rounded bg-rally-info/20 text-rally-info border border-rally-info/30 hover:bg-rally-info/30 text-xs font-mono font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 rounded-sm bg-rally-bg-alt border border-rally-border hover:border-rally-cyan/50 text-rally-secondary hover:text-rally-text text-xs font-mono font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {isProcessing ? 'Thinking…' : 'Send'}
+          {isProcessing ? '…' : '↵'}
         </button>
       </form>
     </div>
