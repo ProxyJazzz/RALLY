@@ -212,7 +212,7 @@ Release regression in `checkout-api`:
 - Truthful Disclosure: Clearly identified as an Alexa+ Compatible Simulation Workspace backed by real MCP and governance, without claiming physical hardware or unverified developer console connectivity.
 - Testing:
   - Added 5 integration tests in `tests/integration/test_alexa_simulation.py` (golden path, rejection path, state snapshots, error handling).
-  - Total test suite: 123 passed, 1 skipped in 3.90s (100% pass rate).
+  - Total test suite: 125 passed, 1 skipped in 3.90s (100% pass rate).
   - Web production build passing cleanly.
 
 ## Current File Being Worked On
