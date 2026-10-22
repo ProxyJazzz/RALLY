@@ -19,7 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from apps.api.app.services.alexa_simulation import AlexaSimulationService
+from app.services.alexa_simulation import AlexaSimulationService
 
 
 @pytest.fixture
@@ -178,3 +178,68 @@ def test_golden_execution_and_independent_verification(client):
     assert "0.7%" in chat_verif.json()["reply"]
     assert "checkout-v41" in chat_verif.json()["reply"]
     assert "RESOLVED" in chat_verif.json()["reply"]
+
+
+def test_reset_clears_all_execution_and_verification_state(client):
+    """Verifies that Reset Fault clears all post-execution values and resets to NOT_EXECUTED / PENDING."""
+    # 1. Complete execution & verification
+    client.post("/api/alexa/chat", json={"message": "Investigate checkout"})
+    client.post(
+        "/api/alexa/approve",
+        json={
+            "incident_id": "INC-ALEXA-GOLDEN",
+            "decision": "APPROVE",
+            "approver": "sre-lead@rally.internal",
+            "reason": "Authorized rollback.",
+        },
+    )
+
+    # 2. Reset
+    reset_res = client.post("/api/alexa/reset")
+    assert reset_res.status_code == 200
+    data = reset_res.json()
+
+    assert data["state"] == "RECEIVED"
+    assert data["action_plan"] is None
+    ev = data["execution_verification"]
+    assert ev["execution_id"] is None
+    assert ev["execution_status"] == "NOT_EXECUTED"
+    assert ev["verification_status"] == "PENDING"
+    assert ev["recovery_decision"] is None
+    assert ev["verified_error_rate"] is None
+    assert ev["verified_active_deployment"] is None
+
+
+def test_second_investigation_after_completed_run_has_no_stale_execution_data(client):
+    """Verifies that running investigation after a reset or completed run yields AWAITING_APPROVAL with no stale execution data."""
+    # Run 1: investigate and approve
+    client.post("/api/alexa/chat", json={"message": "Investigate checkout"})
+    client.post(
+        "/api/alexa/approve",
+        json={
+            "incident_id": "INC-ALEXA-GOLDEN",
+            "decision": "APPROVE",
+            "approver": "sre-lead@rally.internal",
+            "reason": "Authorized rollback.",
+        },
+    )
+
+    # Reset fault
+    client.post("/api/alexa/reset")
+
+    # Run 2: Fresh investigation
+    chat_res = client.post("/api/alexa/chat", json={"message": "Investigate the checkout incident"})
+    assert chat_res.status_code == 200
+    data = chat_res.json()
+
+    assert data["state"] == "AWAITING_APPROVAL"
+    snapshot = data["snapshot"]
+    assert snapshot["state"] == "AWAITING_APPROVAL"
+
+    ev = snapshot["execution_verification"]
+    assert ev["execution_status"] == "NOT_EXECUTED"
+    assert ev["verification_status"] == "PENDING"
+    assert ev["recovery_decision"] is None
+    assert ev["verified_error_rate"] is None
+    assert ev["verified_active_deployment"] is None
+    assert ev["execution_id"] is None

@@ -20,7 +20,7 @@ from agent import AgentMCPClient, IncidentRequest, InvestigationOrchestrator
 from alexa.adapter import AlexaConversationalAdapter
 from alexa.config import AlexaMCPConfig
 from alexa.context import incident_context_manager
-from apps.api.app.schemas.alexa_simulation import (
+from app.schemas.alexa_simulation import (
     ActionPlanSchema,
     AlexaSimulationStateResponse,
     ChatMessageResponse,
@@ -253,6 +253,11 @@ class AlexaSimulationService:
         """Executes the full agentic investigation and governance planning pipeline."""
         self._ensure_mcp_server()
         self.state = SimulationConversationState.INVESTIGATING
+
+        # Fresh investigation: clear previous plan, execution, and verification state
+        self.current_plan = None
+        self.current_raw_plan = None
+        self.execution_verification = ExecutionVerificationSchema()
 
         # Step-by-step timeline building
         now = time.strftime("%H:%M:%S")

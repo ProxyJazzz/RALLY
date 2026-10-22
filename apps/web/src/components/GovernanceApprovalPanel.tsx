@@ -121,7 +121,7 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
                     : 'text-rally-muted'
                 }`}
               >
-                {execVerif.execution_status}
+                {execVerif.execution_status === 'EXECUTED' ? 'EXECUTED' : 'NOT EXECUTED'}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -135,28 +135,32 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
                     : 'text-rally-muted'
                 }`}
               >
-                {execVerif.verification_status}
+                {execVerif.verification_status || 'PENDING'}
               </span>
             </div>
-            {execVerif.verified_error_rate !== undefined && execVerif.verified_error_rate !== null && (
-              <div className="flex items-center justify-between pt-1 border-t border-rally-border/60">
-                <span className="text-rally-muted">Verified Error Rate:</span>
+            <div className="flex items-center justify-between pt-1 border-t border-rally-border/60">
+              <span className="text-rally-muted">Verified Error Rate:</span>
+              {execVerif.verified_error_rate !== undefined && execVerif.verified_error_rate !== null ? (
                 <span className="text-rally-healthy font-semibold">
                   {execVerif.verified_error_rate}% (Healthy Baseline)
                 </span>
-              </div>
-            )}
-            {execVerif.verified_active_deployment && (
-              <div className="flex items-center justify-between">
-                <span className="text-rally-muted">Reinstated Deployment:</span>
+              ) : (
+                <span className="text-rally-muted">—</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-rally-muted">Reinstated Deployment:</span>
+              {execVerif.verified_active_deployment ? (
                 <span className="text-rally-info font-semibold">
                   {execVerif.verified_active_deployment}
                 </span>
-              </div>
-            )}
-            {execVerif.recovery_decision && (
-              <div className="flex items-center justify-between pt-1 border-t border-rally-border/60">
-                <span className="text-rally-muted">Recovery Decision:</span>
+              ) : (
+                <span className="text-rally-muted">—</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between pt-1 border-t border-rally-border/60">
+              <span className="text-rally-muted">Recovery Decision:</span>
+              {execVerif.recovery_decision ? (
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                     execVerif.recovery_decision === 'RESOLVED'
@@ -166,8 +170,10 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
                 >
                   {execVerif.recovery_decision}
                 </span>
-              </div>
-            )}
+              ) : (
+                <span className="text-rally-muted font-bold">PENDING</span>
+              )}
+            </div>
           </div>
         </div>
       )}

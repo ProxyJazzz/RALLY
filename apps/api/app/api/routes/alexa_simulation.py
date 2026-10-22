@@ -11,13 +11,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, status
 
-from apps.api.app.schemas.alexa_simulation import (
+from app.schemas.alexa_simulation import (
     AlexaSimulationStateResponse,
     ApprovalActionRequest,
     ChatMessageRequest,
     ChatMessageResponse,
 )
-from apps.api.app.services.alexa_simulation import AlexaSimulationService
+from app.services.alexa_simulation import AlexaSimulationService
 
 router = APIRouter(prefix="/api/alexa", tags=["Alexa+ Simulation"])
 
