@@ -6,10 +6,11 @@
 
 **Name:** RALLY  
 **Expanded meaning:** Agentic Reliability & Response Orchestration  
-**Current status:** Phase 1 — Foundation ✅ COMPLETE  
+**Current status:** Phase 8B — Alexa+ Simulation Experience COMPLETE ✅
+**Submission status:** Final Hackathon Submission / Documentation and Demo Hardening
 **Primary track:** Alexa+  
 **Target mini challenge:** AWS Builder  
-**Optional mini challenge:** Open Source, only if a meaningful qualifying contribution is completed.
+**Optional mini challenge:** Open Source (NOT CLAIMED without separate qualifying contribution)
 
 ## Product North Star
 
@@ -190,7 +191,8 @@ Release regression in `checkout-api`:
   - Strictly prevents conversational execution bypass: conversational prompts return `NOT_EXECUTED` (approval required).
   - Enforces verification boundary: cannot claim recovery unless independent verification returns `PASSED` / `RESOLVED`.
 - Live Remote MCP Endpoint Verification:
-  - Verified remote tool discovery over Cloudflare Quick Tunnel (`https://republic-asset-tolerance-douglas.trycloudflare.com/mcp`).
+  - Verified remote tool discovery over an ephemeral Cloudflare Quick Tunnel (`https://<ephemeral-tunnel-id>.trycloudflare.com/mcp`).
+  - The URL was ephemeral and intentionally was not persisted in configuration.
   - Remote MCP session initialization confirmed and discovered all 13 tools.
 - Testing:
   - Added 12 new unit and boundary tests in `tests/unit/test_alexa_adapter.py`.
@@ -210,20 +212,28 @@ Release regression in `checkout-api`:
   - `POST /api/alexa/reset`: Resets simulator to fault regression condition.
   - `POST /api/alexa/approve`: Applies explicit human operator approval/rejection to the governance gate.
 - Truthful Disclosure: Clearly identified as an Alexa+ Compatible Simulation Workspace backed by real MCP and governance, without claiming physical hardware or unverified developer console connectivity.
-- Testing:
-  - Added 5 integration tests in `tests/integration/test_alexa_simulation.py` (golden path, rejection path, state snapshots, error handling).
-  - Total test suite: 125 passed, 1 skipped in 3.90s (100% pass rate).
-  - Web production build passing cleanly.
+- Testing & Validation:
+  - Added 7 integration tests in `tests/integration/test_alexa_simulation.py` (golden path, rejection path, state snapshots, multi-run state reset cleanliness).
+  - Total test suite: 125 passed, 1 optional skipped in 4.99s (100% pass rate).
+  - Web production build passing cleanly (`npm run build` in ~450ms).
 
 ## Current File Being Worked On
 
-None — Phase 8B complete.
+None — Phase 8B and submission hardening complete.
 
 ## Next Task
 
-Phase 9 — Command Center UX:
-- Unified web-based operations dashboard and real-time event visualization
-- Live telemetry streaming and expanded incident management
+Final Hackathon Submission:
+- Produce video walkthrough showcasing the Alexa+ Simulation Workspace and golden incident remediation path.
+- Submit repository, documentation, and Amazon Bedrock / Alexa+ Product Feedback.
+- *(Future product roadmap only)* Phase 9 — Extended Command Center UX.
+
+## Known Limitations
+
+1. **Live Alexa+ Developer Access**: Live Amazon Alexa+ Developer Console and physical hardware validation are pending developer program preview access (NOT VERIFIED). The project provides a 100% real-backed conversational simulation workspace.
+2. **Ephemeral Public Tunnel**: Cloudflare Quick Tunnels used during remote MCP testing are ephemeral and change upon restart; URLs are not hardcoded.
+3. **Authentication**: Local/demo mode runs with authentication disabled by default (`RALLY_MCP_AUTH_ENABLED=false`).
+4. **Open Source Mini Challenge**: Not claimed unless a separate qualifying external open source contribution is made.
 
 ## Decisions
 

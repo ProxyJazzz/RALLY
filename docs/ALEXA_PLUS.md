@@ -91,7 +91,7 @@ The conversational interface supports an interactive, multi-turn troubleshooting
 ## 4. MCP Compatibility
 
 - **Transport**: Streamable HTTP (`mcp.server.streamable_http.StreamableHTTPTransport`)
-- **Protocol Version**: Spec `2025-11-25` (official `mcp>=1.2.0` Python SDK)
+- **Protocol Version**: Spec `2025-11-25` (official `mcp>=2.3.0` Python SDK dependency)
 - **JSON-RPC Endpoints**:
   - `POST /mcp`: Session initiation, command dispatch, JSON-RPC messages.
   - `GET /mcp`: Server-sent events / streamable event stream.
@@ -215,22 +215,22 @@ Alexa+ requires public HTTPS ingress to reach the MCP server.
 
 To register RALLY with Alexa+:
 
-1. **Install and Configure Alexa AI CLI**:
+1. **Install Alexa AI CLI**:
    ```bash
-   npm install -g @alexa/alexa-ai-cli
-   alexa-ai configure
+   npm install -g @alexa-ai/cli
    ```
-2. **Register RALLY MCP Add-on**:
+2. **Initialize MCP Add-on Configuration (Documented Flow)**:
    ```bash
-   alexa-ai addon create rally \
+   alexa-ai new mcp --name rally \
      --endpoint "${RALLY_MCP_PUBLIC_URL}" \
      --transport streamable-http \
      --description "RALLY: Evidence-backed automated incident investigation and reliability orchestration."
    ```
-3. **Verify Tool Discovery**:
+3. **Verify Tool Integration**:
    ```bash
-   alexa-ai addon test rally --tool get_service_health --args '{"service_id":"checkout-service"}'
+   alexa-ai test
    ```
+   *(Note: Live cloud deployment and remote developer device synchronization via `alexa-ai deploy` require verified developer program preview access and were not executed).*
 
 ---
 
@@ -253,10 +253,10 @@ python -m pytest tests/integration/test_alexa_mcp.py -v
 ## 12. Live Alexa+ Testing
 
 *Current Status*: **PENDING DEVELOPER ACCESS / LIVE HARDWARE VALIDATION**
-- Local Streamable HTTP MCP server: **Verified** (100% compliant)
+- Local Streamable HTTP MCP server: **Verified** (validated against the MCP protocol/runtime checks performed in this project)
 - Public Cloudflare Quick Tunnel: **Verified** (13 tools discovered remotely via MCP ClientSession)
 - Multi-turn conversational flow: **Verified locally via MCP ClientSession & AlexaConversationalAdapter**
-- Live AWS Alexa+ Developer Account connection: **Pending credential setup / developer program approval**
+- Live AWS Alexa+ Developer Account connection: **Pending credential setup / developer program approval (NOT VERIFIED)**
 
 ---
 
@@ -309,7 +309,17 @@ Measured local round-trip latency over Streamable HTTP transport:
 
 ### 4. Alexa AI CLI
 - **Purpose**: CLI tooling for configuring, managing, and registering MCP add-ons with Alexa+.
-- **Status**: **NOT YET VERIFIED ON LIVE HARDWARE**.
+- **Status**: **NOT YET VERIFIED ON LIVE HARDWARE / CLOUD DEPLOYMENT NOT EXECUTED**.
+- **What Worked Well**: Modern `@alexa-ai/cli` provides clear commands (`alexa-ai new mcp`, `alexa-ai test`) for local manifest creation.
+- **What Needs Improvement**: Clearer diagnostic error messages when testing remote HTTPS endpoints behind firewalls.
+- **Would You Reuse It?**: Yes, once developer preview access is generally available.
+
+### 5. Amazon Bedrock (Converse API)
+- **Purpose**: Multi-turn agentic incident investigation and structured hypothesis generation with the Strands pattern.
+- **Status**: **VERIFIED** (Both deterministic offline CI provider and live opt-in Bedrock Converse API integration).
+- **What Worked Well**: High reasoning accuracy, reliable Pydantic JSON compliance, and prompt isolation against telemetry prompt injection.
+- **What Needs Improvement**: Local mock/emulator tooling from AWS to allow fully offline development without custom test doubles.
+- **Would You Reuse It?**: Yes, highly recommended for production agentic workflows.
 
 ---
 

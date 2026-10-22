@@ -10,7 +10,7 @@
 
 **Phase 8B — Alexa+ Simulation Experience** ✅
 
-Self-Hosted Streamable HTTP MCP Server (MCP Spec 2025-11-25) • 13 Typed Tools (8 Operational + 5 Conversational) • Alexa+ Compatible Conversational Simulation Workspace • Epistemic Evidence Categorization (`OBSERVED`, `INFERRED`, `PROPOSED`, `APPROVED`, `EXECUTED`, `VERIFIED`) • Governed Approval Gate • Independent Telemetry Verification • Live Multi-Turn Command Center UI • 125 Automated Tests Passing
+Self-Hosted Streamable HTTP MCP Server (MCP Spec 2025-11-25) • 13 MCP tools: 7 read-only operational tools, 1 governed write tool, 5 conversational incident-context tools • Alexa+ Compatible Integration Surface & Simulation Workspace • Live Alexa+ Developer Console/Device Validation: **NOT VERIFIED** (Pending Access) • Epistemic Evidence Categorization (`OBSERVED`, `INFERRED`, `PROPOSED`, `APPROVED`, `EXECUTED`, `VERIFIED`) • Governed Approval Gate • Independent Telemetry Verification • Live Multi-Turn Command Center UI • 125 Automated Tests Passing (1 Optional Skipped)
 
 ---
 
@@ -180,7 +180,7 @@ alembic history --verbose
 # From repository root
 source apps/api/.venv/bin/activate
 
-# Run all tests (97 offline unit & protocol integration tests across all phases)
+# Run all tests (125 automated tests passing, 1 optional AWS integration test skipped by default)
 python -m pytest tests/ -v
 
 # Run Phase 7 AWS Bedrock and Strands Agent integration tests
@@ -259,8 +259,9 @@ Alexa+ (Voice/Conversational Surface)
              │
              ▼ (Streamable HTTP, MCP spec 2025-11-25)
    RALLY MCP Server Layer (:8001/mcp)
-             ├── 8 Base Operational Tools (Health, Logs, Deployments, Diffs, Runbooks)
-             └── 5 Alexa Incident Tools (get_incident_context, get_investigation_summary, ...)
+             ├── 7 Read Operational Tools (Health, Error Rate, Logs, Deployments, Diffs, Dependencies, Runbooks)
+             ├── 1 Governed Write Tool (rollback_deployment — Human Approval Gated)
+             └── 5 Conversational Incident Tools (get_incident_context, get_investigation_summary, ...)
              │
              ▼
    Authoritative Incident Context (`alexa/`)
@@ -278,6 +279,7 @@ Alexa+ (Voice/Conversational Surface)
 - **Multi-Turn Continuity**: Alexa+ asks for findings, code diffs, recommendations, execution status, and verification without re-running long investigations redundantly.
 - **Strict Human Approval Gate**: Utterances like *"Roll it back"* or *"Approve the action"* do NOT trigger execution. RALLY returns `NOT_EXECUTED` (approval required) until verified SRE authorization is registered.
 - **Independent Verification**: RALLY only declares `RESOLVED` when independent read-only telemetry queries verify that error rates have dropped below thresholds (e.g., 0.70% < 1.0%).
+- **Verification Status**: RALLY's self-hosted MCP server and local conversational adapter are verified via automated integration suites. Live Alexa+ Developer Console and physical hardware validation are **NOT VERIFIED** (pending developer program preview access).
 
 ### Setup & Local Testing
 
@@ -308,7 +310,7 @@ For the Amazon AppDev Hackathon 2026, RALLY provides an **Alexa+ compatible conv
   7. *Independent Verification*: Verifier queries read-only telemetry; error rate recovers to `0.70%` (`HEALTHY`).
   8. *Resolution*: Incident state transitions to `RESOLVED` only after independent verification passes.
 
-### Public HTTPS & Alexa AI CLI Deployment
+### Public HTTPS & Documented Alexa AI CLI Flow
 
 1. **Start Local MCP Server**:
    ```bash
@@ -318,13 +320,16 @@ For the Amazon AppDev Hackathon 2026, RALLY provides an **Alexa+ compatible conv
    ```bash
    cloudflared tunnel --url http://127.0.0.1:8001
    ```
-3. **Register MCP Add-on with Alexa AI CLI**:
+3. **Documented Alexa AI CLI Add-on Integration (Current `@alexa-ai/cli` flow)**:
    ```bash
-   alexa-ai addon create rally \
-     --endpoint "https://<your-tunnel-id>.trycloudflare.com/mcp" \
-     --transport streamable-http \
-     --description "RALLY: Evidence-backed automated incident investigation and reliability orchestration."
+   # Install official Alexa AI CLI
+   npm install -g @alexa-ai/cli
+
+   # Initialize and configure MCP tool integration
+   alexa-ai new mcp --name rally --endpoint "https://<your-tunnel-id>.trycloudflare.com/mcp" --transport streamable-http
+   alexa-ai test
    ```
+   *(Note: Live cloud deployment and device verification with `alexa-ai deploy` are pending developer program access and have not been executed in this hackathon environment).*
 
 For detailed specifications, OAuth 2.1 authentication contracts, and security models, see [`docs/ALEXA_PLUS.md`](docs/ALEXA_PLUS.md).
 
@@ -671,6 +676,22 @@ RALLY/
 
 ---
 
+## AWS Product Feedback
+
+As part of the AWS Builder Integration, RALLY evaluates and integrates Amazon Bedrock foundation models with the Strands reasoning pattern.
+
+### Amazon Bedrock (Converse API)
+- **What Worked Well**:
+  - The Amazon Bedrock Converse API (`bedrock-runtime.converse`) provides structured, high-accuracy conversational reasoning across multi-turn diagnostic tasks.
+  - Native JSON output mode cleanly aligns with typed Pydantic validation schemas (`BedrockReasoningOutput`).
+  - Separation between system prompts and user message streams provides clear boundaries against telemetry-borne prompt injection attempts.
+- **What Needs Improvement**:
+  - Local emulation tooling for offline development and CI/CD pipelines would reduce reliance on custom mock providers for deterministic automated test suites.
+  - Token-level latency metrics in standard SDK responses would simplify operational performance tracking for real-time SRE command centers.
+- **Onboarding Experience**: Intuitive with standard AWS credentials (`boto3`) and consistent parameter structures across foundation models (Anthropic Claude 3.5 Sonnet).
+
+---
+
 ## Documentation
 
 | Document | Description |
@@ -681,6 +702,7 @@ RALLY/
 | [Rules](docs/RULES.md) | Engineering constraints |
 | [Design](docs/DESIGN.md) | UI/UX design system |
 | [Memory](docs/MEMORY.md) | Working implementation log |
+| [Alexa+ & MCP](docs/ALEXA_PLUS.md) | Alexa+ integration & MCP specification |
 
 ---
 
