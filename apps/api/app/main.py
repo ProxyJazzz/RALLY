@@ -18,7 +18,11 @@ from app.core.config import settings
 from app.core.errors import RallyError, rally_error_handler, unhandled_error_handler
 from app.core.logging import configure_logging, get_logger
 
-configure_logging(settings.log_level)
+configure_logging(
+    log_level=settings.log_level,
+    service_name=settings.otel_service_name or settings.app_name,
+    environment=settings.app_env,
+)
 logger = get_logger(__name__)
 
 
@@ -54,15 +58,23 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Request ID middleware ────────────────────────────────────────────────
+    # ── Request ID & Trace ID middleware ────────────────────────────────────
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
         request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+        trace_id = request.headers.get("x-trace-id", request.headers.get("traceparent", str(uuid.uuid4())))
         structlog.contextvars.clear_contextvars()
-        structlog.contextvars.bind_contextvars(request_id=request_id)
+        structlog.contextvars.bind_contextvars(
+            request_id=request_id,
+            trace_id=trace_id,
+            service=settings.otel_service_name or settings.app_name,
+            environment=settings.app_env,
+        )
         response = await call_next(request)
         response.headers["x-request-id"] = request_id
+        response.headers["x-trace-id"] = trace_id
         return response
+
 
     # ── Error handlers ───────────────────────────────────────────────────────
     app.add_exception_handler(RallyError, rally_error_handler)  # type: ignore[arg-type]

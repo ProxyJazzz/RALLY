@@ -83,9 +83,27 @@ pip install -e ".[dev]"
 cd ../..
 ```
 
+## One-Command Local Startup
+
+Start the complete RALLY environment (FastAPI API on `:8000`, MCP Streamable HTTP server on `:8001`, and React/Vite command center on `:5173`) with a single command from the repository root:
+
+```bash
+git clone <repo>
+cd RALLY
+./start.sh
+```
+
+Once running:
+- **Web (Incident Command Center)** → [http://localhost:5173](http://localhost:5173)
+- **API Gateway** → [http://localhost:8000](http://localhost:8000)
+- **API Docs (Swagger)** → [http://localhost:8000/docs](http://localhost:8000/docs)
+- **MCP Endpoint** → [http://127.0.0.1:8001/mcp](http://127.0.0.1:8001/mcp)
+
+Press `Ctrl+C` in the terminal to gracefully stop all three services simultaneously without leaving orphaned background processes.
+
 ---
 
-## Local Development (without Docker)
+## Local Development (Manual / Multi-Terminal)
 
 ### Start PostgreSQL
 

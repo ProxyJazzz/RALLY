@@ -10,20 +10,59 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.health import DatabaseHealthResponse, HealthResponse, ServiceStatus
-from app.services.health import get_api_health, get_database_health
+from app.schemas.health import (
+    DatabaseHealthResponse,
+    HealthResponse,
+    LivenessResponse,
+    ReadinessResponse,
+    ServiceStatus,
+)
+from app.services.health import (
+    get_api_health,
+    get_database_health,
+    get_liveness,
+    get_readiness,
+)
 
 router = APIRouter(tags=["health"])
+
 
 
 @router.get(
     "/health",
     response_model=HealthResponse,
-    summary="API liveness check",
+    summary="API liveness check (legacy)",
     description="Verifies that the RALLY API process is alive and ready to serve requests.",
 )
 async def health() -> HealthResponse:
     return get_api_health()
+
+
+@router.get(
+    "/liveness",
+    response_model=LivenessResponse,
+    summary="Process liveness check",
+    description="Answers: Is the process alive? Returns immediately without testing external dependencies.",
+)
+async def liveness() -> LivenessResponse:
+    return get_liveness()
+
+
+@router.get(
+    "/readiness",
+    response_model=ReadinessResponse,
+    summary="Service readiness check",
+    description="Answers: Can RALLY actually serve requests? Validates DB and critical dependencies. Returns 503 if not ready.",
+)
+async def readiness(db: AsyncSession = Depends(get_db)) -> ReadinessResponse:
+    from fastapi.responses import JSONResponse
+    result, is_ready = await get_readiness(db)
+    if not is_ready:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=result.model_dump(),
+        )
+    return result
 
 
 @router.get(

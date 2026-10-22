@@ -368,9 +368,24 @@ After every task record:
 - Implemented Planning + Governance Layer on branch `feature/phase-5-planning-governance`.
 - Created `governance/` package with `ActionPlanner`, `PolicyEngine`, `RiskEngine`, `ConditionEvaluator`, and `ApprovalService`.
 - Enforced deterministic policy decisions (REQUIRES_APPROVAL for rollback, DENIED for unsupported or low-confidence actions).
-- Implemented human-in-the-loop approval workflow; agent self-approval is actively blocked.
-- Evaluated preconditions and invalidation triggers against operational state.
-- Strictly preserved the No-Execution Invariant: `execution_status = "NOT_EXECUTED"` across planning and approval.
-- Added 12 new tests (unit + integration). All 81/81 tests pass in 2.15s.
-
-
+### Phase 10A — AWS Production Foundation ✅ (2026-10-23)
+- Implemented centralized production configuration layer in `apps/api/app/core/config.py`:
+  - Categories: APP, DATABASE, AWS, BEDROCK, MCP, SECURITY, OBSERVABILITY.
+  - Backward compatibility aliases preserved for legacy settings.
+- Implemented secrets manager abstraction in `apps/api/app/core/secrets.py`:
+  - `EnvSecretProvider` (local development/testing default).
+  - `AWSSecretsManagerProvider` using ambient IAM credentials (ECS task role/instance profile).
+  - Secret value masking in exceptions and logs.
+- Hardened database connection layer in `apps/api/app/db/session.py`:
+  - Configurable connection pool parameters (`db_pool_size`, `db_max_overflow`, `db_pool_timeout`, `db_pool_recycle`).
+  - Configurable TCP connect timeout (`db_connect_timeout`).
+- Implemented dedicated liveness and readiness probe routes in `apps/api/app/api/routes/health.py`:
+  - `GET /liveness`: Process-only probe, returns 200 immediately without external calls.
+  - `GET /readiness`: Traffic probe, checks DB (`SELECT 1`), MCP configuration, and Bedrock readiness. Returns 503 if DB fails.
+- Hardened structured logging and observability in `apps/api/app/core/logging.py`:
+  - Automatic injection of `trace_id`, `request_id`, `service`, `environment`.
+  - Automatic redaction of sensitive credentials (`token`, `password`, `secret`, `api_key`, `aws_secret_access_key`).
+- Created multi-stage production Dockerfile in `apps/api/Dockerfile.prod` with unprivileged user `rally` and container healthcheck.
+- Verified one-command launcher `start.sh` with safe process inspection and graceful cleanup.
+- Added comprehensive unit and integration tests (138 passed, 1 skipped).
+- Authored production readiness architecture document `docs/PRODUCTION.md`.
