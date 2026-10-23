@@ -120,6 +120,118 @@ class SecretsManager:
             raise ValueError(f"Secret '{secret_id}' does not contain valid JSON payload.") from e
 
 
+class DatabaseCredentials:
+    """Structured representation of database credentials retrieved from secrets."""
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        database: str,
+        engine: str = "postgres",
+    ):
+        if not host:
+            raise ValueError("Database host is required but was empty or missing.")
+        if not username:
+            raise ValueError("Database username is required but was empty or missing.")
+        if not password:
+            raise ValueError("Database password is required but was empty or missing.")
+        if not database:
+            raise ValueError("Database name is required but was empty or missing.")
+        self.host = host
+        try:
+            self.port = int(port)
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid database port: {port}")
+        self.username = username
+        self.password = password
+        self.database = database
+        self.engine = engine
+
+    @classmethod
+    def from_secret_dict(cls, data: dict[str, Any]) -> DatabaseCredentials:
+        """Parse database credentials from Secrets Manager JSON payload."""
+        if not isinstance(data, dict):
+            raise ValueError("Secret payload must be a JSON dictionary.")
+
+        # Preferred key 'database', fallback to 'dbname'
+        db_name = data.get("database") or data.get("dbname")
+        host = data.get("host")
+        raw_port = data.get("port", 5432)
+        try:
+            port = int(raw_port) if raw_port is not None else 5432
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid database port: {raw_port}")
+
+        username = data.get("username")
+        password = data.get("password")
+        engine = data.get("engine", "postgres")
+
+        return cls(
+            host=str(host) if host else "",
+            port=port,
+            username=str(username) if username else "",
+            password=str(password) if password else "",
+            database=str(db_name) if db_name else "",
+            engine=str(engine),
+        )
+
+    def to_async_url(self, require_ssl: bool = True) -> str:
+        """
+        Build async SQLAlchemy PostgreSQL URL (asyncpg).
+        Note: asyncpg SSL is usually passed in connect_args, but ssl parameter can also be in query.
+        """
+        import urllib.parse
+        encoded_user = urllib.parse.quote(self.username, safe="")
+        encoded_pass = urllib.parse.quote(self.password, safe="")
+        url = f"postgresql+asyncpg://{encoded_user}:{encoded_pass}@{self.host}:{self.port}/{self.database}"
+        return url
+
+    def to_sync_url(self, require_ssl: bool = True) -> str:
+        """
+        Build sync SQLAlchemy PostgreSQL URL (psycopg2) for Alembic.
+        Appends ?sslmode=require if require_ssl is True.
+        """
+        import urllib.parse
+        encoded_user = urllib.parse.quote(self.username, safe="")
+        encoded_pass = urllib.parse.quote(self.password, safe="")
+        url = f"postgresql+psycopg2://{encoded_user}:{encoded_pass}@{self.host}:{self.port}/{self.database}"
+        if require_ssl:
+            url += "?sslmode=require"
+        return url
+
+    def __repr__(self) -> str:
+        # Never expose password in representation
+        return f"<DatabaseCredentials host={self.host!r} port={self.port} user={self.username!r} database={self.database!r}>"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
+def resolve_database_urls(
+    secret_id: str = "/rally/production/database",
+    provider: SecretProvider | None = None,
+    require_ssl: bool = True,
+) -> tuple[str, str]:
+    """
+    Resolve (async_url, sync_url) from Secrets Manager.
+    Raises ValueError / SecretNotFoundError on missing or invalid secrets.
+    Never exposes raw password in exceptions or return logs.
+    """
+    prov = provider or get_secret_provider()
+    raw = prov.get_secret(secret_id)
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Secret '{secret_id}' payload is not valid JSON.") from exc
+
+    creds = DatabaseCredentials.from_secret_dict(raw)
+    return creds.to_async_url(require_ssl=require_ssl), creds.to_sync_url(require_ssl=require_ssl)
+
+
 # Global instance
 secrets = SecretsManager()
 

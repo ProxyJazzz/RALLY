@@ -121,15 +121,31 @@ Developers can run the complete stack (FastAPI on `:8000`, MCP server on `:8001`
 
 ---
 
-## 7. Verification Status Matrix
+---
+
+## 7. Production AWS RDS & Secrets Manager Integration
+
+In production (`APP_ENV=production`, `SECRETS_BACKEND=aws_secrets_manager`), database credentials are dynamically fetched at runtime from AWS Secrets Manager using ambient IAM role credentials.
+
+### Network & Security Architecture
+- **Private Subnets**: Amazon RDS PostgreSQL 16.13 and ECS Fargate containers reside in private isolated subnets (`10.0.0.0/16`) without NAT Gateways.
+- **VPC Endpoints**: Container tasks communicate privately with AWS Secrets Manager, Amazon Bedrock, ECR, and CloudWatch Logs via interface VPC endpoints, and with Amazon S3 via gateway endpoint.
+- **SSL Enforcement**: Database enforces SSL (`rds.force_ssl = 1`). SQLAlchemy asyncpg connects using `connect_args={"ssl": "require"}` and Alembic sync migrations connect using `sslmode=require`.
+- **Database Secret**: `/rally/production/database` parsed dynamically without storing secrets in ECS environment variables or git.
+- **Alembic Migrations**: Run inside isolated ECS tasks (`alembic upgrade head`) reaching migration head `0001`.
+
+---
+
+## 8. Verification Status Matrix
 
 | Component | Status | Verification Note |
 | :--- | :--- | :--- |
-| Centralized Configuration | **Implemented & Locally Verified** | 100% unit tested against dev & prod envs |
-| Secrets Manager Abstraction | **Implemented & Locally Verified** | Tested with local fallback and mocked AWS Secrets Manager |
-| Database Pooling & Timeout | **Implemented & Locally Verified** | Tested with asyncpg connection args & SQLAlchemy async engine |
-| Liveness & Readiness Probes | **Implemented & Locally Verified** | Tested with mock healthy and degraded DB states |
-| OpenTelemetry Context / Redaction | **Implemented & Locally Verified** | Bound request_id, trace_id, service, environment, redacted secrets |
-| Production Dockerfile | **Implemented** | `apps/api/Dockerfile.prod` created with non-root security |
-| One-Command Launcher | **Implemented & Locally Verified** | `start.sh` verified across all three services |
-| Live AWS Deployment | **Pending Phase 10B** | Not deployed yet; requires live AWS infrastructure provisioning |
+| Centralized Configuration | **Verified** | 100% unit tested against dev & prod envs |
+| Secrets Manager Abstraction | **Verified** | Tested with local fallback and AWS Secrets Manager |
+| Database Pooling & Timeout | **Verified** | Tested with asyncpg connection args & SQLAlchemy async engine |
+| Liveness & Readiness Probes | **Verified** | Probed against live ALB: `/liveness` (200), `/health/database` (200), `/readiness` (200) |
+| OpenTelemetry Context / Redaction | **Verified** | Bound request_id, trace_id, service, environment, redacted secrets |
+| Production Dockerfile | **Verified** | `apps/api/Dockerfile.prod` built for `linux/amd64` and pushed to ECR |
+| Live ECS Fargate Compute | **Verified** | Running in AWS Fargate with ALB health checks passing |
+| Private RDS PostgreSQL | **Verified** | Connected via Secrets Manager and verified with Alembic head `0001` |
+

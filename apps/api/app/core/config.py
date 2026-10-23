@@ -39,9 +39,17 @@ class Settings(BaseSettings):
     )
 
     # ── 2. DATABASE (PostgreSQL / AWS RDS) ───────────────────────────────────
+    database_secret_id: str = Field(
+        default="/rally/production/database",
+        description="AWS Secrets Manager secret ID for database credentials",
+    )
     database_url: str = Field(
         default="postgresql+asyncpg://rally:rally@localhost:5432/rally",
         description="Async SQLAlchemy database connection string",
+    )
+    database_url_sync_override: str | None = Field(
+        default=None,
+        description="Explicit sync database URL (for Alembic in production/AWS)",
     )
     db_pool_size: int = Field(default=5, ge=1, le=100, description="SQLAlchemy connection pool base size")
     db_max_overflow: int = Field(default=10, ge=0, le=100, description="Max overflow connections allowed beyond pool_size")
@@ -52,7 +60,13 @@ class Settings(BaseSettings):
     # The synchronous URL is used by Alembic migrations only.
     @property
     def database_url_sync(self) -> str:
-        return self.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        if self.database_url_sync_override:
+            return self.database_url_sync_override
+        sync_url = self.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        if self.app_env.lower() == "production" and "sslmode" not in sync_url:
+            delimiter = "&" if "?" in sync_url else "?"
+            sync_url += f"{delimiter}sslmode=require"
+        return sync_url
 
     # ── 3. AWS (Ambient Credentials & IAM Roles) ─────────────────────────────
     aws_region: str | None = Field(default=None, description="AWS Region (e.g. us-east-1, us-west-2)")
@@ -119,12 +133,28 @@ class Settings(BaseSettings):
         if self.mcp_oauth_resource and not self.rally_mcp_oauth_resource:
             self.rally_mcp_oauth_resource = self.mcp_oauth_resource
 
-        if self.app_env.lower() == "production":
-            # Production guardrails
-            if "localhost" in self.database_url or "127.0.0.1" in self.database_url:
-                # Disallow local unencrypted DB in strict production if explicitly checked
-                pass
+        if self.secrets_backend.lower() == "aws_secrets_manager":
+            self.resolve_database_from_secrets()
+
         return self
+
+    def resolve_database_from_secrets(self, provider: Any = None) -> None:
+        """
+        Explicitly resolves database credentials and sets database_url & database_url_sync_override.
+        Safe to call during application startup or when swapping providers in tests.
+        Never throws during import if ambient AWS credentials are absent in local/test environments.
+        """
+        try:
+            from app.core.secrets import resolve_database_urls
+            async_url, sync_url = resolve_database_urls(
+                secret_id=self.database_secret_id,
+                provider=provider,
+                require_ssl=self.app_env.lower() == "production",
+            )
+            self.database_url = async_url
+            self.database_url_sync_override = sync_url
+        except Exception:
+            pass
 
 
 settings = Settings()

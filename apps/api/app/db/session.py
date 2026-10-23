@@ -7,6 +7,7 @@ Schema is managed exclusively through Alembic migrations.
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -22,6 +23,14 @@ class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
 
 
+connect_args: dict[str, Any] = {}
+if "asyncpg" in settings.database_url:
+    connect_args["command_timeout"] = settings.db_connect_timeout
+    connect_args["timeout"] = settings.db_connect_timeout
+    # Enforce SSL for AWS RDS in production or when connecting to RDS endpoints
+    if settings.app_env.lower() == "production" or "rds.amazonaws.com" in settings.database_url:
+        connect_args["ssl"] = "require"
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.app_env == "development",
@@ -29,10 +38,7 @@ engine = create_async_engine(
     max_overflow=settings.db_max_overflow,
     pool_timeout=settings.db_pool_timeout,
     pool_recycle=settings.db_pool_recycle,
-    connect_args={
-        "command_timeout": settings.db_connect_timeout,
-        "timeout": settings.db_connect_timeout,
-    } if "asyncpg" in settings.database_url else {},
+    connect_args=connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(
