@@ -84,3 +84,23 @@ logs/
 tmp/
 temp/
 .tmp/
+
+# AWS CDK
+infra/node_modules/
+infra/cdk.out/
+
+# AWS CDK
+infra/node_modules/
+infra/cdk.out/
+
+# AWS CDK
+infra/node_modules/
+infra/cdk.out/
+
+# CDK TypeScript build artifacts
+infra/bin/*.js
+infra/bin/*.d.ts
+infra/config/*.js
+infra/config/*.d.ts
+infra/lib/*.js
+infra/lib/*.d.ts
