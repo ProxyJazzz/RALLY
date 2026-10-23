@@ -31,7 +31,7 @@ export const HypothesesView: React.FC<HypothesesViewProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-tactical-gold" />
             <span className="text-[10px] font-mono tracking-widest uppercase text-off-white font-semibold">
-              ROOT-CAUSE DEDUCTION • BAYESIAN REASONING MATRIX
+              ROOT-CAUSE DEDUCTION • AUTONOMOUS AGENT CONFIDENCE MATRIX
             </span>
             <span className="text-steel">|</span>
             <span className="text-[10px] font-mono text-tactical-gold">
@@ -196,7 +196,7 @@ export const HypothesesView: React.FC<HypothesesViewProps> = ({
           <div className="bg-obsidian border border-steel rounded p-5 sm:p-6 select-none">
             <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
               <span>COMPETING HYPOTHESES REASONING MATRIX</span>
-              <span>BAYESIAN EVIDENCE WEIGHTING</span>
+              <span>AGENT EVIDENCE WEIGHTING</span>
             </div>
 
             <div className="divide-y divide-steel/60 mt-2 font-mono text-xs">

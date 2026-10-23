@@ -9,8 +9,8 @@ Provides endpoints for:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
-
+from fastapi import APIRouter, Header, HTTPException, status
+from app.core.config import settings
 from app.schemas.alexa_simulation import (
     AlexaSimulationStateResponse,
     ApprovalActionRequest,
@@ -50,14 +50,38 @@ async def send_chat_message(request: ChatMessageRequest) -> ChatMessageResponse:
 
 
 @router.post("/approve", response_model=AlexaSimulationStateResponse)
-async def submit_approval_action(request: ApprovalActionRequest) -> AlexaSimulationStateResponse:
+async def submit_approval_action(
+    request: ApprovalActionRequest,
+    authorization: str | None = Header(default=None),
+    x_idempotency_key: str | None = Header(default=None),
+) -> AlexaSimulationStateResponse:
     """Processes an explicit human operator approval or rejection through RALLY Governance."""
+    # ── 1. Production Authorization Boundary ─────────────────────────────────
+    if settings.auth_enabled:
+        if not authorization:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required: Missing Authorization header for governed approval.",
+            )
+        expected_token = settings.approval_auth_token
+        if expected_token:
+            token = authorization.removeprefix("Bearer ").strip()
+            if token != expected_token:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Invalid governance authorization token.",
+                )
+
+    # ── 2. Request Idempotency Key ───────────────────────────────────────────
+    request_id = request.approval_request_id or x_idempotency_key
+
     service = AlexaSimulationService.get_instance()
     try:
         return await service.execute_approval_decision(
             decision=request.decision,
             approver=request.approver,
             reason=request.reason,
+            request_id=request_id,
         )
     except ValueError as ve:
         raise HTTPException(

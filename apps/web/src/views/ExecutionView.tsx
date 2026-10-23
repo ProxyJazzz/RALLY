@@ -148,8 +148,8 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({
           {/* ── 4. FORENSIC AUDIT TIMELINE LOG ────────────────────────────── */}
           <div className="bg-obsidian border border-steel rounded p-5 sm:p-6 select-none font-sans">
             <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
-              <span>CRYPTOGRAPHIC MUTATION AUDIT LOG</span>
-              <span>NON-REPUDIATED EVENT TRACE</span>
+              <span>STRUCTURED MUTATION AUDIT TRAIL</span>
+              <span>AUDIT-LOGGED EVENT TRACE</span>
             </div>
 
             <div className="mt-4 divide-y divide-steel/60 font-mono text-xs">

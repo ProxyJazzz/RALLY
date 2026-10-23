@@ -155,7 +155,7 @@ export const ServiceTopology: React.FC<ServiceTopologyProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               HEALTHY
             </div>
-            <div className="text-[9px] font-mono text-ash mt-1">28ms • 0.02% Err</div>
+            <div className="text-[9px] font-mono text-ash mt-1">BASELINE: 28ms • 0.02% Err</div>
           </div>
 
           {/* Inventory */}
@@ -178,7 +178,7 @@ export const ServiceTopology: React.FC<ServiceTopologyProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               HEALTHY
             </div>
-            <div className="text-[9px] font-mono text-ash mt-1">16ms • 0.05% Err</div>
+            <div className="text-[9px] font-mono text-ash mt-1">BASELINE: 16ms • 0.05% Err</div>
           </div>
 
           {/* Auth */}
@@ -201,7 +201,7 @@ export const ServiceTopology: React.FC<ServiceTopologyProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               HEALTHY
             </div>
-            <div className="text-[9px] font-mono text-ash mt-1">12ms • 0.01% Err</div>
+            <div className="text-[9px] font-mono text-ash mt-1">BASELINE: 12ms • 0.01% Err</div>
           </div>
         </div>
 

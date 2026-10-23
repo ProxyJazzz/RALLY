@@ -203,7 +203,9 @@ export const ServicesView: React.FC<ServicesViewProps> = ({
 
           <div className="pt-4 border-t border-steel/60 font-mono text-[10px] text-ash flex items-center justify-between">
             <span>PROBED VIA MCP: get_service_health</span>
-            <span className="text-success-green font-bold">LIVE TELEMETRY</span>
+            <span className="text-tactical-gold font-bold">
+              {selectedService.id === 'checkout-service' ? 'LIVE TELEMETRY' : 'TOPOLOGY BASELINE'}
+            </span>
           </div>
         </div>
 

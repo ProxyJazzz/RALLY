@@ -25,7 +25,7 @@ export const ActionSequenceFlow: React.FC<ActionSequenceFlowProps> = ({
     {
       num: '02',
       title: 'GOVERNANCE APPROVAL BARRIER',
-      desc: 'Verify designated SRE cryptographic authorization token before dispatching production mutation.',
+      desc: 'Verify designated SRE governance authorization decision before dispatching production mutation.',
       status: isApproved ? 'APPROVED' : 'AWAITING_APPROVAL',
       tool: 'ApprovalGateway',
     },

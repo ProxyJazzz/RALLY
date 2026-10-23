@@ -83,7 +83,7 @@ export const ApprovalView: React.FC<ApprovalViewProps> = ({
             GOVERNANCE GATE
           </h1>
           <p className="font-sans text-sm sm:text-base text-ash mt-3 leading-relaxed">
-            RALLY enforces a cryptographic human authorization barrier before applying any production mutation. Autonomous agents are permanently restricted from self-executing destructive operations.
+            RALLY enforces a Human SRE Governance Authorization barrier before applying any production mutation. Autonomous agents are permanently restricted from self-executing destructive operations.
           </p>
         </div>
       </div>
@@ -210,7 +210,7 @@ export const ApprovalView: React.FC<ApprovalViewProps> = ({
 
                   <div>
                     <label className="text-[10px] font-mono uppercase text-ash tracking-wider block mb-1">
-                      NON-REPUDIATED SIGN-OFF JUSTIFICATION
+                      AUDIT-LOGGED OPERATOR APPROVAL JUSTIFICATION
                     </label>
                     <input
                       type="text"

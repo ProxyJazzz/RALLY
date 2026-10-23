@@ -89,18 +89,45 @@ export const MCPView: React.FC<MCPViewProps> = ({ state, isProcessing, onNavigat
       category: 'CONTEXT',
       risk: 'LOW',
       governed: false,
-      description: 'Retrieves active incident identifier, state, timeline, and current reasoning context.',
+      description: 'Retrieves authoritative multi-turn incident context including state, active deployment, and plan identifiers.',
       schema: '{ incident_id: string }',
-      exampleResponse: '{\n  "incident_id": "INC-ALEXA-GOLDEN",\n  "state": "RESOLVED"\n}',
+      exampleResponse: '{\n  "incident_id": "INC-ALEXA-GOLDEN",\n  "affected_service": "checkout-service",\n  "status": "AWAITING_APPROVAL"\n}',
     },
     {
       name: 'get_investigation_summary',
       category: 'CONTEXT',
       risk: 'LOW',
       governed: false,
-      description: 'Returns structured narrative of investigation findings for voice/chat synthesis.',
+      description: 'Returns conversational summary of root cause findings, evidence citations, and recommended remediation.',
       schema: '{ incident_id: string }',
-      exampleResponse: '{\n  "summary": "Checkout validation regression resolved via rollback to checkout-v41."\n}',
+      exampleResponse: '{\n  "incident_id": "INC-ALEXA-GOLDEN",\n  "primary_root_cause": "CHECKOUT_VALIDATION_REGRESSION",\n  "confidence": 0.95\n}',
+    },
+    {
+      name: 'get_action_plan',
+      category: 'CONTEXT',
+      risk: 'LOW',
+      governed: false,
+      description: 'Returns the remediation action plan, deterministic risk level, and human approval requirement status.',
+      schema: '{ incident_id: string }',
+      exampleResponse: '{\n  "plan_id": "plan-INC-ALEXA-GOLDEN",\n  "action": "rollback_deployment",\n  "risk_level": "HIGH",\n  "policy_decision": "REQUIRES_APPROVAL"\n}',
+    },
+    {
+      name: 'get_execution_status',
+      category: 'CONTEXT',
+      risk: 'LOW',
+      governed: false,
+      description: 'Returns the current execution state of an action plan, enforcing that unapproved actions remain NOT_EXECUTED.',
+      schema: '{ incident_id: string }',
+      exampleResponse: '{\n  "incident_id": "INC-ALEXA-GOLDEN",\n  "execution_status": "NOT_EXECUTED",\n  "action_type": "rollback_deployment"\n}',
+    },
+    {
+      name: 'get_verification_status',
+      category: 'CONTEXT',
+      risk: 'LOW',
+      governed: false,
+      description: 'Returns the post-remediation independent recovery verification outcome and measured error rate.',
+      schema: '{ incident_id: string }',
+      exampleResponse: '{\n  "incident_id": "INC-ALEXA-GOLDEN",\n  "verification_status": "PASSED",\n  "recovery_decision": "RESOLVED",\n  "measured_error_rate_pct": 0.70\n}',
     },
   ]
 
@@ -207,7 +234,7 @@ export const MCPView: React.FC<MCPViewProps> = ({ state, isProcessing, onNavigat
               </span>
             </div>
             <p className="font-sans text-xs text-ash mt-2 leading-relaxed">
-              Targeted ECS task rollback mutations. Dispatches require validated cryptographic SRE approval tokens.
+              Targeted ECS task rollback mutations. Dispatches require validated human SRE governance authorization.
             </p>
             <div className="mt-3 text-[10px] text-tactical-gold">
               MANDATORY HUMAN APPROVAL BARRIER

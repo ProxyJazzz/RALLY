@@ -56,6 +56,7 @@ class AlexaSimulationService:
         self.current_plan: ActionPlanSchema | None = None
         self.current_raw_plan: Any = None
         self.execution_verification = ExecutionVerificationSchema()
+        self.processed_approval_request_ids: set[str] = set()
         self.last_assistant_speech: str = (
             "RALLY operational assistant initialized. Say 'Investigate the checkout incident' to begin."
         )
@@ -114,6 +115,7 @@ class AlexaSimulationService:
         self.current_plan = None
         self.current_raw_plan = None
         self.execution_verification = ExecutionVerificationSchema()
+        self.processed_approval_request_ids.clear()
         self.last_assistant_speech = (
             "Elevated checkout error rate detected (18.4%). You can ask me to investigate."
         )
@@ -431,11 +433,51 @@ class AlexaSimulationService:
         )
 
     async def execute_approval_decision(
-        self, decision: str, approver: str, reason: str
+        self, decision: str, approver: str, reason: str, request_id: str | None = None
     ) -> AlexaSimulationStateResponse:
         """Processes an explicit human approval or rejection through governance."""
+        # ── 1. Plan Presence Invariant ───────────────────────────────────────
         if not self.current_raw_plan:
             raise ValueError("No active action plan available to approve.")
+
+        # ── 2. Idempotency & Replay Protection ───────────────────────────────
+        if request_id:
+            if request_id in self.processed_approval_request_ids:
+                # Return current authoritative snapshot idempotently without executing again
+                return self.get_snapshot()
+
+        # ── 3. State Invariant Guards ────────────────────────────────────────
+        # A plan can only be approved if it is actively awaiting approval
+        if self.state in {
+            SimulationConversationState.APPROVED,
+            SimulationConversationState.EXECUTING,
+            SimulationConversationState.VERIFYING,
+            SimulationConversationState.RESOLVED,
+        }:
+            if decision.upper() == "APPROVE":
+                # Already approved or past execution; safe idempotent return or reject re-mutation
+                if request_id:
+                    self.processed_approval_request_ids.add(request_id)
+                return self.get_snapshot()
+            raise ValueError(
+                f"Cannot change decision to {decision} on a plan already in '{self.state.value}' state."
+            )
+
+        if self.state == SimulationConversationState.REJECTED:
+            if decision.upper() == "REJECT":
+                return self.get_snapshot()
+            raise ValueError("Cannot approve a plan that has already been rejected.")
+
+        if self.state not in {
+            SimulationConversationState.AWAITING_APPROVAL,
+            SimulationConversationState.PLANNING,
+        }:
+            raise ValueError(
+                f"Cannot process approval decision while incident is in '{self.state.value}' state."
+            )
+
+        if request_id:
+            self.processed_approval_request_ids.add(request_id)
 
         now = time.strftime("%H:%M:%S")
 

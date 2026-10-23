@@ -37,7 +37,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   onNavigate,
 }) => {
   const isDbHealthy = dbStatus === 'success' && database?.status === 'ok'
-  const latency = database?.latency_ms ?? 7.26
+  const latency = database?.latency_ms
   const environment = (api?.environment ?? database?.environment ?? 'development').toUpperCase()
 
   return (
@@ -182,12 +182,16 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
               </span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="font-display text-6xl sm:text-7xl text-tactical-gold leading-none">
-                  {latency.toFixed(2)}
+                  {latency !== undefined && latency !== null ? latency.toFixed(2) : '--'}
                 </span>
-                <span className="font-mono text-xl text-tactical-gold/80 font-bold">ms</span>
+                <span className="font-mono text-xl text-tactical-gold/80 font-bold">
+                  {latency !== undefined && latency !== null ? 'ms' : ''}
+                </span>
               </div>
               <span className="text-xs text-ash mt-1 block">
-                Sub-10ms target met within private VPC boundary.
+                {latency !== undefined && latency !== null
+                  ? 'Sub-10ms target met within private VPC boundary.'
+                  : 'Telemetry probe unavailable or database offline.'}
               </span>
             </div>
 

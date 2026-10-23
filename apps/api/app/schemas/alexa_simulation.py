@@ -133,3 +133,7 @@ class ApprovalActionRequest(BaseModel):
     decision: str  # "APPROVE" | "REJECT"
     approver: str = "sre-lead@rally.internal"
     reason: str = "Authorized by Lead SRE after reviewing diff and runbook."
+    approval_request_id: str | None = Field(
+        default=None,
+        description="Optional client-provided idempotency key for replay prevention",
+    )

@@ -26,8 +26,8 @@ export const PreconditionCheckList: React.FC<PreconditionCheckListProps> = ({
     },
     {
       id: 'PC-03',
-      title: 'GOVERNANCE SIGNATURE UNEXPIRED',
-      detail: 'Operator SRE cryptographic sign-off token verified within TTL threshold.',
+      title: 'GOVERNANCE AUTHORIZATION ACTIVE',
+      detail: 'Operator SRE governance authorization verified within validity window.',
       passed: isExecuted,
     },
     {

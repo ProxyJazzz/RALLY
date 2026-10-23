@@ -53,7 +53,11 @@ def create_rally_mcp_app(
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    # Default local dev runner for RALLY MCP Server over Streamable HTTP
+    # Environment-driven host/port configuration with safe local development defaults
+    host = os.getenv("MCP_HOST", "127.0.0.1")
+    port = int(os.getenv("MCP_PORT", "8001"))
+    log_level = os.getenv("LOG_LEVEL", "info").lower()
     app = create_rally_mcp_app()
-    uvicorn.run(app, host="127.0.0.1", port=8001, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level=log_level)

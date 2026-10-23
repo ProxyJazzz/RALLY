@@ -14,7 +14,7 @@ export const ConfidenceGauge: React.FC<ConfidenceGaugeProps> = ({
   return (
     <div className="bg-charcoal border border-steel/80 rounded p-4 flex flex-col justify-between font-mono">
       <div className="flex items-center justify-between text-[10px] uppercase text-ash tracking-widest pb-2 border-b border-steel/60">
-        <span>BAYESIAN CONFIDENCE</span>
+        <span>AGENT CONFIDENCE</span>
         <span className="text-tactical-gold font-bold">{tier} CERTAINTY</span>
       </div>
 
@@ -24,7 +24,7 @@ export const ConfidenceGauge: React.FC<ConfidenceGaugeProps> = ({
         </span>
         <div className="flex flex-col">
           <span className="text-lg text-tactical-gold/80 font-bold leading-none">%</span>
-          <span className="text-[9px] text-ash uppercase tracking-wider mt-1">POSTERIOR PROB</span>
+          <span className="text-[9px] text-ash uppercase tracking-wider mt-1">INFERENCE PROB</span>
         </div>
       </div>
 

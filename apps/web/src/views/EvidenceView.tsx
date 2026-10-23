@@ -425,7 +425,7 @@ export const EvidenceView: React.FC<EvidenceViewProps> = ({ evidence, onNavigate
           </div>
 
           <div className="pt-3 border-t border-steel/60 text-[9px] font-mono text-ash uppercase">
-            EPISTEMIC STANDARD: Strict cryptographic provenance verification
+            EPISTEMIC STANDARD: Epistemic Provenance Tracking
           </div>
         </div>
       </div>

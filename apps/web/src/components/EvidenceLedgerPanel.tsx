@@ -51,7 +51,7 @@ export const EvidenceLedgerPanel: React.FC<EvidenceLedgerPanelProps> = ({ eviden
       </div>
 
       <div className="pt-2 border-t border-steel/60 text-[9px] font-mono text-ash uppercase flex items-center justify-between">
-        <span>CRYPTOGRAPHIC AUDIT TRAIL</span>
+        <span>STRUCTURED MUTATION AUDIT TRAIL</span>
         <span className="text-success-green">VERIFIED</span>
       </div>
     </div>

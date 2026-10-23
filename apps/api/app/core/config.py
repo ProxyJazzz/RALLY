@@ -38,6 +38,14 @@ class Settings(BaseSettings):
         description="Allowed CORS origin domains",
     )
 
+    @model_validator(mode="after")
+    def validate_production_cors(self) -> Settings:
+        """Ensures CORS is never wildcard '*' in production."""
+        if self.app_env.lower() == "production":
+            if any(origin.strip() == "*" for origin in self.cors_origins):
+                raise ValueError("CORS wildcard '*' is strictly forbidden in production mode.")
+        return self
+
     # ── 2. DATABASE (PostgreSQL / AWS RDS) ───────────────────────────────────
     database_secret_id: str = Field(
         default="/rally/production/database",
@@ -108,6 +116,10 @@ class Settings(BaseSettings):
 
     # ── 6. SECURITY ──────────────────────────────────────────────────────────
     auth_enabled: bool = Field(default=False, description="Enable API gateway authentication")
+    approval_auth_token: str | None = Field(
+        default=None,
+        description="Optional shared secret / Bearer token required for POST /api/alexa/approve when auth_enabled is true",
+    )
 
     # ── 7. OBSERVABILITY (OpenTelemetry & CloudWatch) ─────────────────────────
     log_level: str = Field(default="INFO", description="Structured logging level (DEBUG, INFO, WARNING, ERROR)")

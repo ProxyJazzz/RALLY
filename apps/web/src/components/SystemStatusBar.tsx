@@ -82,6 +82,12 @@ export const SystemStatusBar: React.FC<SystemStatusBarProps> = ({
           <span>STREAMABLE HTTP</span>
         </span>
 
+        <span className="hidden lg:flex items-center gap-1 text-ash">
+          <span className="text-steel">|</span>
+          <span className="text-off-white font-medium">BEDROCK</span>
+          <span>CONFIGURED</span>
+        </span>
+
         <span className="hidden xl:flex items-center gap-1 text-ash">
           <span className="text-steel">|</span>
           <span className="text-signal-cyan">GOVERNANCE</span>

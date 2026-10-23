@@ -42,7 +42,7 @@ export const HypothesisPanel: React.FC<HypothesisPanelProps> = ({
           <span className="text-off-white font-medium">ROOT CAUSE DEDUCTION</span>
         </span>
         <span className="text-tactical-gold font-bold">
-          {score}% POSTERIOR CERTAINTY
+          {score}% AGENT CERTAINTY
         </span>
       </div>
 
