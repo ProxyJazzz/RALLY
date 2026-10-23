@@ -5,6 +5,10 @@ interface GlobalHeaderProps {
   activeIncidentLabel?: string
   incidentId?: string
   apiHealthy?: boolean
+  environment?: string
+  currentPath?: string
+  onOpenCommandPalette?: () => void
+  onToggleMobileNav?: () => void
 }
 
 export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
@@ -12,6 +16,10 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   activeIncidentLabel = 'CHECKOUT REGRESSION',
   incidentId = '4821',
   apiHealthy = true,
+  environment = 'SIMULATOR',
+  currentPath = '/overview',
+  onOpenCommandPalette,
+  onToggleMobileNav,
 }) => {
   const [time, setTime] = useState<string>(
     new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -30,67 +38,123 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({
     return () => clearInterval(timer)
   }, [])
 
+  // Map route path to human readable context title
+  const getPageTitle = (path: string): string => {
+    switch (path) {
+      case '/overview':
+        return 'INCIDENT COMMAND COCKPIT'
+      case '/incident':
+        return 'INCIDENT FORENSIC OVERVIEW'
+      case '/evidence':
+        return 'FORENSIC EVIDENCE LEDGER'
+      case '/timeline':
+        return 'CHRONOLOGICAL TIMELINE'
+      case '/hypotheses':
+        return 'RANKED ROOT-CAUSE HYPOTHESES'
+      case '/action-plan':
+        return 'REMEDIATION ACTION PLAN'
+      case '/approval':
+        return 'GOVERNANCE APPROVAL BARRIER'
+      case '/execution':
+        return 'EXECUTION & VERIFICATION'
+      case '/services':
+        return 'SERVICE TOPOLOGY & TELEMETRY'
+      case '/mcp':
+        return 'MCP TOOL REGISTRY'
+      case '/database':
+        return 'POSTGRESQL & SECRETS TELEMETRY'
+      default:
+        return 'OPERATIONS COCKPIT'
+    }
+  }
+
   return (
-    <header className="h-12 bg-rally-bg border-b border-rally-border px-4 flex items-center justify-between select-none shrink-0 z-30">
-      {/* Left: Product Identity */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-sm bg-rally-surface border border-rally-border flex items-center justify-center font-mono font-bold text-xs text-rally-cyan">
-            R
-          </div>
-          <span className="font-mono font-bold tracking-wider text-rally-text text-sm">
-            RALLY
+    <header className="h-12 bg-obsidian border-b border-steel px-3 sm:px-4 flex items-center justify-between select-none shrink-0 z-30 font-sans">
+      {/* ── Left: Mobile Menu Trigger + Contextual View Title ─────────────── */}
+      <div className="flex items-center gap-3 min-w-0">
+        {onToggleMobileNav && (
+          <button
+            type="button"
+            onClick={onToggleMobileNav}
+            aria-label="Open navigation menu"
+            className="md:hidden text-ash hover:text-off-white p-1 rounded hover:bg-graphite transition-colors"
+          >
+            <span className="text-sm font-mono">☰</span>
+          </button>
+        )}
+
+        <div className="flex items-center gap-2.5">
+          <span className="font-display text-base text-off-white tracking-wide truncate">
+            {getPageTitle(currentPath)}
+          </span>
+          <span className="hidden sm:inline-block text-steel">/</span>
+          <span className="hidden sm:inline-block text-[10px] font-mono text-ash tracking-widest uppercase">
+            RALLY SECURE COCKPIT
           </span>
         </div>
-        <span className="text-rally-border text-xs">|</span>
-        <span className="text-[11px] font-mono text-rally-secondary hidden md:inline">
-          Reliability & Response Orchestration
-        </span>
       </div>
 
-      {/* Center: Incident Badge */}
-      <div className="flex items-center">
+      {/* ── Center: Incident Status Banner ─────────────────────────────────── */}
+      <div className="hidden md:flex items-center">
         {hasActiveIncident ? (
-          <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-sm bg-rally-red/15 border border-rally-red/40 text-rally-red text-xs font-mono font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-rally-red animate-pulse" />
-            <span className="text-rally-text">INCIDENT {incidentId}</span>
-            <span className="text-rally-border">/</span>
-            <span>{activeIncidentLabel}</span>
-            <span className="text-rally-border">/</span>
-            <span className="bg-rally-red text-white text-[10px] px-1 rounded-sm">SEV-2</span>
+          <div className="flex items-center gap-2 px-3 py-1 rounded bg-crimson/15 border border-crimson/40 text-crimson text-xs font-mono font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-crimson animate-pulse" />
+            <span className="text-off-white font-semibold">INCIDENT #{incidentId}</span>
+            <span className="text-steel">|</span>
+            <span className="text-crimson truncate max-w-[140px] lg:max-w-none">
+              {activeIncidentLabel}
+            </span>
+            <span className="text-steel">|</span>
+            <span className="bg-crimson text-off-white text-[9px] font-bold px-1.5 py-0.2 rounded">
+              SEV-2
+            </span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-2.5 py-0.5 rounded-sm bg-rally-surface border border-rally-border text-rally-green text-xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-rally-green" />
-            <span>ALL SYSTEMS OPERATIONAL</span>
+          <div className="flex items-center gap-2 px-3 py-1 rounded bg-charcoal border border-steel text-success-green text-xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
+            <span className="text-off-white">ALL SYSTEMS OPERATIONAL</span>
           </div>
         )}
       </div>
 
-      {/* Right: Operational Status & Local Clock */}
-      <div className="flex items-center gap-3 text-xs font-mono">
-        <div className="hidden sm:flex items-center gap-1.5 text-rally-secondary">
+      {/* ── Right: Command Trigger + Environment + Connection & Clock ──────── */}
+      <div className="flex items-center gap-2.5 sm:gap-3 text-xs font-mono shrink-0">
+        {/* Command Palette Trigger */}
+        {onOpenCommandPalette && (
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            title="Open Command Palette (Cmd+K / Ctrl+K)"
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-graphite border border-steel text-ash hover:text-off-white hover:border-tactical-gold/50 transition-colors"
+          >
+            <span className="text-tactical-gold text-[10px]">⌘</span>
+            <span className="hidden lg:inline text-[11px] font-sans">Find command</span>
+            <kbd className="hidden sm:inline-block text-[9px] font-mono text-ash bg-charcoal border border-steel px-1 rounded">
+              ⌘K
+            </kbd>
+          </button>
+        )}
+
+        {/* Environment Badge */}
+        <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-charcoal border border-steel text-[10px]">
+          <span className="text-ash uppercase">ENV:</span>
+          <span className="text-tactical-gold font-medium uppercase">{environment}</span>
+        </div>
+
+        {/* API Connection Indicator */}
+        <div className="hidden sm:flex items-center gap-1.5 text-ash text-[11px]">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              apiHealthy ? 'bg-rally-green' : 'bg-rally-red'
+              apiHealthy ? 'bg-success-green' : 'bg-crimson'
             }`}
           />
-          <span className="text-[11px]">SYSTEM OPERATIONAL</span>
+          <span className="text-off-white/80 font-mono text-[10px] uppercase">
+            {apiHealthy ? 'API ONLINE' : 'API OFFLINE'}
+          </span>
         </div>
 
-        <div className="hidden lg:flex items-center gap-1.5 text-rally-muted text-[11px]">
-          <span>MCP</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-rally-cyan" />
-          <span className="text-rally-cyan">CONNECTED</span>
-        </div>
-
-        <div className="hidden lg:flex items-center gap-1.5 text-rally-muted text-[11px]">
-          <span>AGENT</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-rally-green" />
-          <span className="text-rally-secondary">READY</span>
-        </div>
-
-        <div className="px-2 py-0.5 rounded-sm bg-rally-surface border border-rally-border text-rally-text font-mono text-[11px]">
+        {/* Local Clock */}
+        <div className="px-2 py-1 rounded bg-charcoal border border-steel text-off-white font-mono text-[11px]">
           {time}
         </div>
       </div>

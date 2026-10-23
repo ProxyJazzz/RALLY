@@ -1,52 +1,101 @@
 import React from 'react'
 
 interface SystemStatusBarProps {
-  apiStatus?: string
-  dbStatus?: string
+  apiStatus?: 'healthy' | 'degraded' | 'error' | 'loading'
+  dbStatus?: 'healthy' | 'degraded' | 'error' | 'loading'
+  latencyMs?: number
+  environment?: string
 }
 
 export const SystemStatusBar: React.FC<SystemStatusBarProps> = ({
   apiStatus = 'healthy',
   dbStatus = 'healthy',
+  latencyMs,
+  environment = 'SIMULATOR',
 }) => {
+  const isAllHealthy = apiStatus === 'healthy' && dbStatus === 'healthy'
+
   return (
-    <footer className="h-7 bg-rally-bg border-t border-rally-border px-3.5 flex items-center justify-between text-[11px] font-mono text-rally-muted select-none shrink-0 z-30">
-      <div className="flex items-center gap-3">
-        <span className="font-bold text-rally-text">RALLY v0.1.0</span>
-        <span className="text-rally-border">|</span>
-        <span className="hidden sm:inline">
-          ENVIRONMENT: <span className="text-rally-secondary">SIMULATOR</span>
-        </span>
-        <span className="hidden md:inline text-rally-border">|</span>
-        <span className="hidden md:inline">
-          MCP: <span className="text-rally-blue">STREAMABLE HTTP</span>
-        </span>
-        <span className="hidden lg:inline text-rally-border">|</span>
-        <span className="hidden lg:inline">
-          GOVERNANCE: <span className="text-rally-amber">ENABLED</span>
-        </span>
-        <span className="hidden xl:inline text-rally-border">|</span>
-        <span className="hidden xl:inline">
-          VERIFICATION: <span className="text-rally-green">INDEPENDENT</span>
+    <footer className="h-7 bg-obsidian border-t border-steel px-3 sm:px-4 flex items-center justify-between text-[10px] font-mono text-ash select-none shrink-0 z-30">
+      {/* ── Left: Platform & Telemetry Signals ─────────────────────────── */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <span className="font-bold text-off-white tracking-wider">RALLY</span>
+        <span className="text-steel">|</span>
+
+        {/* API Telemetry */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-ash uppercase">API:</span>
+          <span
+            className={`flex items-center gap-1 font-semibold uppercase ${
+              apiStatus === 'healthy' ? 'text-success-green' : 'text-crimson'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                apiStatus === 'healthy' ? 'bg-success-green' : 'bg-crimson animate-pulse'
+              }`}
+            />
+            {apiStatus.toUpperCase()}
+          </span>
+        </div>
+
+        <span className="hidden sm:inline text-steel">|</span>
+
+        {/* Database Telemetry */}
+        <div className="hidden sm:flex items-center gap-1.5">
+          <span className="text-ash uppercase">DB:</span>
+          <span
+            className={`flex items-center gap-1 font-semibold uppercase ${
+              dbStatus === 'healthy' ? 'text-success-green' : 'text-crimson'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                dbStatus === 'healthy' ? 'bg-success-green' : 'bg-crimson animate-pulse'
+              }`}
+            />
+            {dbStatus.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Optional Latency if provided by live health check */}
+        {latencyMs !== undefined && (
+          <>
+            <span className="hidden md:inline text-steel">|</span>
+            <div className="hidden md:flex items-center gap-1">
+              <span className="text-ash uppercase">LATENCY:</span>
+              <span className="text-off-white font-mono">{latencyMs.toFixed(2)}ms</span>
+            </div>
+          </>
+        )}
+
+        <span className="hidden lg:inline text-steel">|</span>
+        <span className="hidden lg:inline text-ash">
+          ENV: <span className="text-off-white uppercase">{environment}</span>
         </span>
       </div>
 
-      <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-rally-surface border border-rally-border text-[10px] text-rally-secondary">
-          <span className="w-1.5 h-1.5 rounded-full bg-rally-blue" />
-          ALEXA+ COMPATIBLE
-          <span className="text-rally-muted">SIMULATION MODE</span>
+      {/* ── Right: Operations Capabilities Badges ──────────────────────── */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="hidden md:flex items-center gap-1 text-ash">
+          <span className="text-tactical-gold">MCP</span>
+          <span>STREAMABLE HTTP</span>
         </span>
-        <span className="hidden sm:flex items-center gap-1.5">
+
+        <span className="hidden xl:flex items-center gap-1 text-ash">
+          <span className="text-steel">|</span>
+          <span className="text-signal-cyan">GOVERNANCE</span>
+          <span>ENFORCED</span>
+        </span>
+
+        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-charcoal border border-steel">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              apiStatus === 'healthy' && dbStatus === 'healthy'
-                ? 'bg-rally-green'
-                : 'bg-rally-red'
+              isAllHealthy ? 'bg-success-green' : 'bg-crimson'
             }`}
           />
-          <span className="text-rally-secondary uppercase text-[10px]">
-            {apiStatus === 'healthy' ? 'SYSTEM OPERATIONAL' : 'DEGRADED'}
+          <span className="text-off-white font-semibold uppercase tracking-wider text-[9px]">
+            {isAllHealthy ? 'SYSTEM OPERATIONAL' : 'DEGRADED STATE'}
           </span>
         </span>
       </div>

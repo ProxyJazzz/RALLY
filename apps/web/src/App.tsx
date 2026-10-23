@@ -3,6 +3,7 @@ import { useHealth } from './hooks/useHealth'
 import { GlobalHeader } from './components/GlobalHeader'
 import { NavigationRail, SidebarBadges } from './components/NavigationRail'
 import { SystemStatusBar } from './components/SystemStatusBar'
+import { CommandPalette } from './components/CommandPalette'
 import { ConversationalPanel } from './components/ConversationalPanel'
 import { OverviewView } from './views/OverviewView'
 import { IncidentView } from './views/IncidentView'
@@ -66,7 +67,43 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  // ── 2. AUTHORITATIVE RALLY STATE ──────────────────────────────────────
+  // ── 2. SHELL NAVIGATION & OVERLAYS STATE ──────────────────────────────
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+
+  // Keyboard shortcut listener for Cmd/Ctrl+K and Sidebar Collapse ([)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K -> Command Palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen((prev) => !prev)
+        return
+      }
+
+      // Hotkey: '[' to toggle sidebar collapse (only when not typing in an input/textarea)
+      if (
+        e.key === '[' &&
+        !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)
+      ) {
+        e.preventDefault()
+        setIsSidebarCollapsed((prev) => !prev)
+        return
+      }
+
+      // Escape closes mobile nav or command palette
+      if (e.key === 'Escape') {
+        setIsMobileNavOpen(false)
+        setIsCommandPaletteOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
+
+  // ── 3. AUTHORITATIVE RALLY STATE ──────────────────────────────────────
   const [state, setState] = useState<AlexaSimulationState | null>(null)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -237,11 +274,11 @@ function App() {
   const renderWorkspaceView = () => {
     if (isLoading && !state) {
       return (
-        <div className="bg-rally-surface border border-rally-border rounded p-12 text-center font-mono">
-          <div className="text-rally-cyan text-sm uppercase animate-pulse">
+        <div className="surface-card p-12 text-center font-mono">
+          <div className="text-tactical-gold text-sm uppercase animate-pulse">
             LOADING INCIDENT STATE FROM RALLY BACKEND...
           </div>
-          <p className="text-xs text-rally-secondary mt-1">
+          <p className="text-xs text-ash mt-1">
             Connecting to Streamable HTTP MCP server and PostgreSQL state storage.
           </p>
         </div>
@@ -250,16 +287,16 @@ function App() {
 
     if (apiError && !state) {
       return (
-        <div className="bg-rally-surface border border-rally-red/40 rounded p-12 text-center font-mono space-y-3">
-          <div className="text-rally-red text-sm font-bold uppercase">
+        <div className="surface-critical p-12 text-center font-mono space-y-3">
+          <div className="text-crimson text-sm font-bold uppercase">
             RALLY BACKEND UNAVAILABLE ({apiError})
           </div>
-          <p className="text-xs text-rally-secondary font-sans">
-            Unable to connect to FastAPI endpoint at http://localhost:8000. Please verify the API server process is running.
+          <p className="text-xs text-ash font-sans">
+            Unable to connect to FastAPI endpoint. Please verify the API server process is running.
           </p>
           <button
             onClick={() => void fetchState()}
-            className="px-4 py-2 rounded bg-rally-bg border border-rally-border hover:border-rally-cyan text-xs text-rally-cyan font-bold"
+            className="px-4 py-2 rounded bg-obsidian border border-steel hover:border-tactical-gold text-xs text-tactical-gold font-bold transition-colors"
           >
             RETRY CONNECTION
           </button>
@@ -398,33 +435,43 @@ function App() {
     }
   }
 
+  const currentEnv = api?.environment ?? 'SIMULATOR'
+
   return (
-    <div className="h-screen w-screen overflow-hidden bg-rally-bg text-rally-text flex flex-col font-sans bg-command-grid">
+    <div className="h-screen w-screen overflow-hidden bg-void-black text-off-white flex flex-col font-sans bg-tactical-grid bg-film-grain ambient-radial-gold">
       {/* ── 1. GLOBAL HEADER ────────────────────────────────────────── */}
       <GlobalHeader
         hasActiveIncident={hasActiveIncident || isIdle}
         activeIncidentLabel="CHECKOUT REGRESSION"
         incidentId="4821"
         apiHealthy={apiStatus === 'success'}
+        environment={currentEnv}
+        currentPath={currentPath}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onToggleMobileNav={() => setIsMobileNavOpen((prev) => !prev)}
       />
 
       {/* ── 2. THREE-ZONE COCKPIT SHELL ─────────────────────────────── */}
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-        {/* ZONE 1: LEFT NAVIGATION RAIL (210px) */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
+        {/* ZONE 1: TACTICAL NAVIGATION RAIL */}
         <NavigationRail
           currentPath={currentPath}
           onNavigate={handleNavigate}
           badges={badges}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          isMobileOpen={isMobileNavOpen}
+          onMobileClose={() => setIsMobileNavOpen(false)}
         />
 
         {/* ZONE 2: PRIMARY WORKSPACE (CENTER DOMINANT) */}
-        <main className="flex-1 p-3 overflow-y-auto min-w-0">
+        <main className="flex-1 p-3 sm:p-4 overflow-y-auto min-w-0">
           {apiError && state && (
-            <div className="mb-3 p-2.5 rounded bg-rally-red/10 border border-rally-red/30 text-xs font-mono text-rally-red flex items-center justify-between">
+            <div className="mb-3 p-2.5 rounded bg-crimson/10 border border-crimson/30 text-xs font-mono text-crimson flex items-center justify-between">
               <span>{apiError}</span>
               <button
                 onClick={() => setApiErrorState(null)}
-                className="text-xs text-rally-muted hover:text-rally-text px-1"
+                className="text-xs text-ash hover:text-off-white px-1"
               >
                 ✕
               </button>
@@ -447,6 +494,15 @@ function App() {
       <SystemStatusBar
         apiStatus={apiStatus === 'success' ? 'healthy' : 'degraded'}
         dbStatus={dbStatus === 'success' ? 'healthy' : 'degraded'}
+        latencyMs={database?.latency_ms}
+        environment={currentEnv}
+      />
+
+      {/* ── 4. COMMAND PALETTE OVERLAY (CMD+K / CTRL+K) ──────────────── */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={handleNavigate}
       />
     </div>
   )
