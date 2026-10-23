@@ -7,96 +7,107 @@ interface HypothesisPanelProps {
 }
 
 export const HypothesisPanel: React.FC<HypothesisPanelProps> = ({
+  primaryHypothesis,
   confidence = 0,
   state,
 }) => {
   const isInvestigated = state !== 'IDLE' && state !== 'RECEIVED' && state !== 'TRIAGING'
-
-  const hypotheses = [
-    {
-      id: 'H1',
-      title: 'CHECKOUT REGRESSION (checkout-v42)',
-      score: confidence > 0 ? Math.round(confidence * 100) : 91,
-      evidence: [
-        'Deployment timestamp correlation',
-        'Elevated 18.4% error spike',
-        'Payment/Inventory dependency health normal',
-        'Deployment diff identified regression',
-        'Temporal causality confirmed',
-      ],
-    },
-    { id: 'H2', title: 'PAYMENT DEPENDENCY FAILURE', score: 4, evidence: [] },
-    { id: 'H3', title: 'INVENTORY DEPENDENCY FAILURE', score: 3, evidence: [] },
-    { id: 'H4', title: 'AUTHENTICATION FAILURE', score: 2, evidence: [] },
-  ]
+  const isResolved = state === 'RESOLVED'
+  const score = confidence > 0 ? Math.round(confidence * 100) : 95
+  const resolvedHypothesis =
+    primaryHypothesis ?? 'CHECKOUT_VALIDATION_REGRESSION in checkout-v42'
 
   if (!isInvestigated) {
     return (
-      <div className="bg-rally-surface border border-rally-border rounded p-3 select-none flex flex-col justify-between font-mono">
-        <div className="flex items-center justify-between pb-1.5 border-b border-rally-border text-[10px] uppercase text-rally-muted tracking-wider">
-          <span>ROOT CAUSE ANALYSIS</span>
-          <span className="text-rally-muted">AWAITING INVESTIGATION</span>
+      <div className="bg-obsidian border border-steel rounded p-4 sm:p-5 select-none flex flex-col justify-between font-mono">
+        <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] uppercase text-ash tracking-wider">
+          <span className="flex items-center gap-1.5">
+            <span className="text-tactical-gold">◈</span>
+            <span className="text-off-white font-medium">ROOT CAUSE REASONING</span>
+          </span>
+          <span className="text-ash">STANDBY</span>
         </div>
-        <div className="py-8 text-center text-xs text-rally-muted">
+        <div className="py-10 text-center text-xs text-ash">
           AWAITING INVESTIGATION • Autonomous reasoning will activate upon telemetry ingestion.
         </div>
       </div>
     )
   }
 
-  const h1 = hypotheses[0]
-
   return (
-    <div className="bg-rally-surface border border-rally-border rounded p-3 select-none flex flex-col justify-between font-mono">
-      <div className="flex items-center justify-between pb-1.5 border-b border-rally-border text-[10px] uppercase text-rally-muted tracking-wider">
-        <span>ROOT CAUSE ANALYSIS</span>
-        <span className="text-rally-cyan font-bold">H1 HIGH CONFIDENCE ({h1.score}%)</span>
+    <div className="bg-obsidian border border-steel rounded p-4 sm:p-5 select-none flex flex-col justify-between font-sans">
+      <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
+        <span className="flex items-center gap-2">
+          <span className="text-tactical-gold">◈</span>
+          <span className="text-off-white font-medium">ROOT CAUSE DEDUCTION</span>
+        </span>
+        <span className="text-tactical-gold font-bold">
+          {score}% POSTERIOR CERTAINTY
+        </span>
       </div>
 
-      <div className="py-1.5 space-y-2">
-        {/* Primary hypothesis card */}
-        <div className="bg-rally-bg border border-rally-border rounded p-2.5">
-          <div className="flex items-center justify-between text-xs font-bold text-rally-text">
-            <span className="text-rally-cyan">H1 {h1.title}</span>
-            <span className="text-rally-cyan text-sm">{h1.score}%</span>
+      <div className="py-3 space-y-3">
+        {/* Primary hypothesis display */}
+        <div className="bg-charcoal/80 border border-tactical-gold/40 rounded p-3.5">
+          <div className="flex items-center justify-between text-xs font-mono font-bold">
+            <span className="text-tactical-gold uppercase">H1 • PRIMARY DEDUCTION</span>
+            <span className="text-tactical-gold text-sm">{score}%</span>
           </div>
 
-          {/* ASCII / Solid Confidence Bar */}
-          <div className="w-full h-2 bg-rally-surface-card rounded-sm overflow-hidden my-2 border border-rally-border">
+          <div className="mt-1 text-sm font-semibold text-off-white">
+            {resolvedHypothesis}
+          </div>
+
+          {/* Solid segmented bar */}
+          <div className="w-full h-1.5 bg-graphite rounded-xs overflow-hidden my-2.5 border border-steel/80">
             <div
-              className="h-full bg-rally-cyan transition-all duration-500"
-              style={{ width: `${h1.score}%` }}
+              className="h-full bg-tactical-gold transition-all duration-500"
+              style={{ width: `${score}%` }}
             />
           </div>
 
           {/* Supporting Evidence Checklist */}
-          <div className="text-[10px] text-rally-secondary space-y-0.5 pt-1 border-t border-rally-border/60">
-            <div className="text-[9px] uppercase text-rally-muted font-bold tracking-wider mb-1">
-              SUPPORTING EVIDENCE:
+          <div className="text-[11px] text-off-white/80 space-y-1 pt-2 border-t border-steel/60 font-mono">
+            <div className="text-[9px] uppercase text-ash font-bold tracking-wider mb-1">
+              SUPPORTING EVIDENCE PROOF:
             </div>
-            {h1.evidence.map((ev, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <span className="text-rally-green font-bold">✓</span>
-                <span className="text-rally-text">{ev}</span>
-              </div>
-            ))}
+            <div className="flex items-center gap-2">
+              <span className="text-success-green font-bold">✓</span>
+              <span>Deployment diff verified in order_validator.py</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-success-green font-bold">✓</span>
+              <span>18.4% error rate elevation temporal correlation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-success-green font-bold">✓</span>
+              <span>Downstream payment/inventory health isolated 100% nominal</span>
+            </div>
           </div>
         </div>
 
-        {/* Secondary ranked hypotheses */}
-        <div className="grid grid-cols-3 gap-1.5 text-[10px]">
-          {hypotheses.slice(1).map((h) => (
-            <div key={h.id} className="bg-rally-bg border border-rally-border rounded p-1.5">
-              <div className="flex items-center justify-between text-rally-muted">
-                <span>{h.id} {h.title.split(' ')[0]}</span>
-                <span>{h.score}%</span>
-              </div>
-              <div className="w-full h-1 bg-rally-surface-card rounded-sm overflow-hidden mt-1">
-                <div className="h-full bg-rally-muted/40" style={{ width: `${h.score * 5}%` }} />
-              </div>
-            </div>
-          ))}
+        {/* Secondary rejected alternatives */}
+        <div className="grid grid-cols-3 gap-2 text-[10px] font-mono">
+          <div className="bg-charcoal/60 border border-steel/60 rounded p-2 text-center">
+            <span className="text-ash block uppercase text-[8px]">H2 PAYMENT</span>
+            <span className="text-crimson font-bold block mt-0.5">DISPROVEN (4%)</span>
+          </div>
+          <div className="bg-charcoal/60 border border-steel/60 rounded p-2 text-center">
+            <span className="text-ash block uppercase text-[8px]">H3 INVENTORY</span>
+            <span className="text-crimson font-bold block mt-0.5">DISPROVEN (3%)</span>
+          </div>
+          <div className="bg-charcoal/60 border border-steel/60 rounded p-2 text-center">
+            <span className="text-ash block uppercase text-[8px]">H4 AUTH</span>
+            <span className="text-crimson font-bold block mt-0.5">DISPROVEN (2%)</span>
+          </div>
         </div>
+      </div>
+
+      <div className="pt-2 border-t border-steel/60 text-[9px] font-mono text-ash uppercase flex items-center justify-between">
+        <span>EPISTEMIC STATE:</span>
+        <span className="text-tactical-gold font-bold">
+          {isResolved ? 'VERIFIED IN GROUND TRUTH' : 'PROBABILISTIC INFERENCE'}
+        </span>
       </div>
     </div>
   )
