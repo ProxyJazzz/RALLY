@@ -1,124 +1,216 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 interface ServiceTopologyProps {
   activeDeployment?: string
   isRecovered?: boolean
   mcpActive?: boolean
+  selectedServiceId?: string
+  onSelectService?: (serviceId: string) => void
 }
 
 export const ServiceTopology: React.FC<ServiceTopologyProps> = ({
   activeDeployment = 'checkout-v42',
   isRecovered = false,
   mcpActive = false,
+  selectedServiceId,
+  onSelectService,
 }) => {
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
+
+  const handleNodeClick = (serviceId: string) => {
+    if (onSelectService) {
+      onSelectService(serviceId)
+    }
+  }
+
+  const isCheckoutSelected = selectedServiceId === 'checkout-service'
+  const isPaymentSelected = selectedServiceId === 'payment-service'
+  const isInventorySelected = selectedServiceId === 'inventory-service'
+  const isAuthSelected = selectedServiceId === 'auth-service'
+
   return (
-    <div className="bg-rally-surface border border-rally-border rounded p-3 select-none flex flex-col justify-between">
-      <div className="flex items-center justify-between pb-1.5 border-b border-rally-border text-[10px] font-mono uppercase text-rally-muted tracking-wider">
+    <div className="bg-obsidian border border-steel rounded p-5 sm:p-6 select-none flex flex-col justify-between font-sans">
+      <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
         <span className="flex items-center gap-2">
-          <span>SERVICE DEPENDENCY TOPOLOGY</span>
-          <span className="text-rally-cyan bg-rally-cyan/10 border border-rally-cyan/25 px-1 py-0.2 rounded-sm">
-            mcp::get_dependency_health
-          </span>
+          <span className="text-tactical-gold font-mono">⛁</span>
+          <span className="text-off-white font-medium">LIVE SYSTEM TOPOLOGY MAP</span>
         </span>
-        <span className={isRecovered ? 'text-rally-green' : 'text-rally-red font-semibold'}>
-          {isRecovered ? 'TOPOLOGY HEALTHY' : '1 NODE DEGRADED (CHECKOUT)'}
+        <span
+          className={`font-bold ${
+            isRecovered ? 'text-success-green' : 'text-crimson'
+          }`}
+        >
+          {isRecovered ? 'TOPOLOGY 100% HEALTHY' : '1 NODE DEGRADED (CHECKOUT)'}
         </span>
       </div>
 
-      <div className="py-2 flex flex-col items-center justify-center font-mono text-xs">
-        {/* USERS INGRESS */}
+      <div className="py-6 flex flex-col items-center justify-center font-mono text-xs">
+        {/* Tier 0: USERS INGRESS TRAFFIC */}
         <div className="flex flex-col items-center">
-          <div className="px-2.5 py-0.5 rounded-sm bg-rally-bg border border-rally-border text-rally-secondary text-[10px] flex items-center gap-1">
-            <span>USERS INGRESS (HTTP)</span>
+          <div className="px-3.5 py-1.5 rounded bg-charcoal border border-steel text-off-white text-[10px] tracking-widest uppercase flex items-center gap-2 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-signal-cyan animate-pulse" />
+            <span>PUBLIC INGRESS TRAFFIC (INTERNET)</span>
           </div>
-          {/* Ingress Edge */}
-          <div className="h-4 w-px bg-rally-border flex items-center justify-center relative">
-            <span className="text-[8px] text-rally-muted absolute -right-2 top-0.5">▼</span>
+
+          <div className="h-5 w-px bg-steel/80 flex items-center justify-center relative">
+            <span className="text-[8px] text-ash absolute -right-2 top-1">▼</span>
+          </div>
+
+          {/* Tier 0.5: APPLICATION LOAD BALANCER / API GATEWAY */}
+          <div className="px-3 py-1 rounded bg-charcoal/80 border border-steel/80 text-ash text-[10px] tracking-wider uppercase">
+            <span>PUBLIC ALB / FASTAPI GATEWAY (:8000)</span>
+          </div>
+
+          <div className="h-5 w-px bg-steel/80 flex items-center justify-center relative">
+            <span className="text-[8px] text-ash absolute -right-2 top-1">▼</span>
           </div>
         </div>
 
-        {/* CHECKOUT CORE SERVICE (DOMINANT NODE) */}
+        {/* Tier 1: CHECKOUT CORE SERVICE (DOMINANT FOCAL POINT) */}
         <div
-          className={`w-full max-w-[280px] p-2.5 rounded border transition-all ${
+          role="button"
+          tabIndex={0}
+          aria-label="Checkout Service Node"
+          onClick={() => handleNodeClick('checkout-service')}
+          onMouseEnter={() => setHoveredNode('checkout-service')}
+          onMouseLeave={() => setHoveredNode(null)}
+          onKeyDown={(e) => e.key === 'Enter' && handleNodeClick('checkout-service')}
+          className={`w-full max-w-[340px] p-4 rounded border cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-tactical-gold ${
             isRecovered
-              ? 'bg-rally-green/10 border-rally-green/50 text-rally-green shadow-sm'
-              : 'bg-rally-red/10 border-rally-red/50 text-rally-red shadow-sm'
+              ? 'bg-charcoal border-success-green/50 text-success-green shadow-tactical-green'
+              : 'bg-charcoal border-crimson/60 text-crimson shadow-tactical-crimson'
+          } ${
+            isCheckoutSelected
+              ? 'ring-2 ring-tactical-gold'
+              : hoveredNode === 'checkout-service'
+              ? 'border-tactical-gold/70'
+              : ''
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-rally-text tracking-wide">
-              CHECKOUT-SERVICE
-            </span>
+            <div>
+              <span className="font-display text-xl text-off-white tracking-wider block">
+                CHECKOUT-SERVICE
+              </span>
+              <span className="text-[9px] text-ash font-mono uppercase block -mt-0.5">
+                TIER-1 CORE INGRESS
+              </span>
+            </div>
             <span
-              className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+              className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase ${
                 isRecovered
-                  ? 'bg-rally-green text-black'
-                  : 'bg-rally-red text-white animate-pulse'
+                  ? 'bg-success-green/20 text-success-green border border-success-green/40'
+                  : 'bg-crimson/20 text-crimson border border-crimson/40 animate-pulse'
               }`}
             >
-              {isRecovered ? 'HEALTHY' : '🔴 DEGRADED'}
+              {isRecovered ? 'HEALTHY' : 'CRITICAL'}
             </span>
           </div>
-          <div className="flex items-center justify-between text-[10px] font-mono mt-1 text-rally-text">
-            <span>DEPLOYMENT: {isRecovered ? 'checkout-v41' : activeDeployment}</span>
-            <span className={isRecovered ? 'text-rally-green' : 'text-rally-red font-bold'}>
+
+          <div className="flex items-center justify-between text-xs font-mono mt-2 pt-2 border-t border-steel/60 text-off-white">
+            <span className="text-ash">{isRecovered ? 'checkout-v41' : activeDeployment}</span>
+            <span className={isRecovered ? 'text-success-green font-bold' : 'text-crimson font-bold text-sm'}>
               {isRecovered ? '0.70% ERR' : '18.4% ERR'}
             </span>
           </div>
+
           {mcpActive && (
-            <div className="text-[9px] text-rally-cyan mt-1 flex items-center gap-1 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-rally-cyan animate-ping" />
-              <span>MCP Telemetry Probing...</span>
+            <div className="text-[10px] text-signal-cyan mt-1.5 flex items-center gap-1.5 font-mono pt-1 border-t border-steel/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-signal-cyan animate-ping" />
+              <span>MCP Active Probe In Progress...</span>
             </div>
           )}
         </div>
 
         {/* Downstream Connector Edges (SVG) */}
-        <div className="w-full max-w-[420px] h-7 relative">
+        <div className="w-full max-w-[480px] h-8 relative my-1">
           <svg className="w-full h-full overflow-visible">
-            {/* Center stem down from Checkout */}
-            <line x1="50%" y1="0" x2="50%" y2="12" stroke="#202833" strokeWidth="1.5" />
-            {/* Horizontal distribution bar */}
-            <line x1="16.6%" y1="12" x2="83.3%" y2="12" stroke="#202833" strokeWidth="1.5" />
-            {/* Left drop to Payment */}
-            <line x1="16.6%" y1="12" x2="16.6%" y2="28" stroke="#202833" strokeWidth="1.5" />
-            {/* Center drop to Inventory */}
-            <line x1="50%" y1="12" x2="50%" y2="28" stroke="#202833" strokeWidth="1.5" />
-            {/* Right drop to Auth */}
-            <line x1="83.3%" y1="12" x2="83.3%" y2="28" stroke="#202833" strokeWidth="1.5" />
+            <line x1="50%" y1="0" x2="50%" y2="14" stroke="#383838" strokeWidth="1.5" />
+            <line x1="16.6%" y1="14" x2="83.3%" y2="14" stroke="#383838" strokeWidth="1.5" />
+            <line x1="16.6%" y1="14" x2="16.6%" y2="32" stroke="#383838" strokeWidth="1.5" />
+            <line x1="50%" y1="14" x2="50%" y2="32" stroke="#383838" strokeWidth="1.5" />
+            <line x1="83.3%" y1="14" x2="83.3%" y2="32" stroke="#383838" strokeWidth="1.5" />
           </svg>
         </div>
 
-        {/* DOWNSTREAM DEPENDENCY NODES (3 NODES) */}
-        <div className="grid grid-cols-3 gap-2.5 w-full max-w-[480px]">
+        {/* Tier 2: DOWNSTREAM DEPENDENCY NODES (3 NODES) */}
+        <div className="grid grid-cols-3 gap-3 w-full max-w-[540px]">
           {/* Payment */}
-          <div className="bg-rally-bg border border-rally-border rounded p-2 text-center">
-            <div className="text-[10px] font-bold text-rally-text truncate">PAYMENT</div>
-            <div className="flex items-center justify-center gap-1 text-[9px] text-rally-green mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-rally-green" />
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Payment Service Node"
+            onClick={() => handleNodeClick('payment-service')}
+            onMouseEnter={() => setHoveredNode('payment-service')}
+            onMouseLeave={() => setHoveredNode(null)}
+            onKeyDown={(e) => e.key === 'Enter' && handleNodeClick('payment-service')}
+            className={`bg-charcoal border rounded p-3 text-center cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-tactical-gold ${
+              isPaymentSelected
+                ? 'border-tactical-gold ring-1 ring-tactical-gold'
+                : 'border-steel hover:border-tactical-gold/40'
+            }`}
+          >
+            <div className="text-xs font-bold text-off-white truncate font-sans">PAYMENT</div>
+            <div className="flex items-center justify-center gap-1 text-[10px] font-mono text-success-green mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               HEALTHY
             </div>
-            <div className="text-[9px] text-rally-muted mt-0.5">0.02% Err</div>
+            <div className="text-[9px] font-mono text-ash mt-1">28ms • 0.02% Err</div>
           </div>
 
           {/* Inventory */}
-          <div className="bg-rally-bg border border-rally-border rounded p-2 text-center">
-            <div className="text-[10px] font-bold text-rally-text truncate">INVENTORY</div>
-            <div className="flex items-center justify-center gap-1 text-[9px] text-rally-green mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-rally-green" />
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Inventory Service Node"
+            onClick={() => handleNodeClick('inventory-service')}
+            onMouseEnter={() => setHoveredNode('inventory-service')}
+            onMouseLeave={() => setHoveredNode(null)}
+            onKeyDown={(e) => e.key === 'Enter' && handleNodeClick('inventory-service')}
+            className={`bg-charcoal border rounded p-3 text-center cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-tactical-gold ${
+              isInventorySelected
+                ? 'border-tactical-gold ring-1 ring-tactical-gold'
+                : 'border-steel hover:border-tactical-gold/40'
+            }`}
+          >
+            <div className="text-xs font-bold text-off-white truncate font-sans">INVENTORY</div>
+            <div className="flex items-center justify-center gap-1 text-[10px] font-mono text-success-green mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               HEALTHY
             </div>
-            <div className="text-[9px] text-rally-muted mt-0.5">0.05% Err</div>
+            <div className="text-[9px] font-mono text-ash mt-1">16ms • 0.05% Err</div>
           </div>
 
           {/* Auth */}
-          <div className="bg-rally-bg border border-rally-border rounded p-2 text-center">
-            <div className="text-[10px] font-bold text-rally-text truncate">AUTH</div>
-            <div className="flex items-center justify-center gap-1 text-[9px] text-rally-green mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-rally-green" />
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Auth Service Node"
+            onClick={() => handleNodeClick('auth-service')}
+            onMouseEnter={() => setHoveredNode('auth-service')}
+            onMouseLeave={() => setHoveredNode(null)}
+            onKeyDown={(e) => e.key === 'Enter' && handleNodeClick('auth-service')}
+            className={`bg-charcoal border rounded p-3 text-center cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-tactical-gold ${
+              isAuthSelected
+                ? 'border-tactical-gold ring-1 ring-tactical-gold'
+                : 'border-steel hover:border-tactical-gold/40'
+            }`}
+          >
+            <div className="text-xs font-bold text-off-white truncate font-sans">AUTH</div>
+            <div className="flex items-center justify-center gap-1 text-[10px] font-mono text-success-green mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               HEALTHY
             </div>
-            <div className="text-[9px] text-rally-muted mt-0.5">0.01% Err</div>
+            <div className="text-[9px] font-mono text-ash mt-1">12ms • 0.01% Err</div>
+          </div>
+        </div>
+
+        {/* Tier 3: DATABASE CONNECTOR */}
+        <div className="flex flex-col items-center mt-3">
+          <div className="h-4 w-px bg-steel/80" />
+          <div className="px-4 py-1.5 rounded bg-charcoal border border-steel text-off-white text-[10px] tracking-wider uppercase flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
+            <span>POSTGRESQL DATA LAYER (RDS PRIVATE)</span>
           </div>
         </div>
       </div>

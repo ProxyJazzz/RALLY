@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { ServiceTopology } from '../components/ServiceTopology'
 
 interface ServicesViewProps {
@@ -14,26 +14,32 @@ export const ServicesView: React.FC<ServicesViewProps> = ({
   errorRate = 18.4,
   onNavigate,
 }) => {
+  const [selectedServiceId, setSelectedServiceId] = useState<string>('checkout-service')
+
   const services = [
     {
       id: 'checkout-service',
       name: 'CHECKOUT SERVICE',
-      tier: 'Tier-1 Core',
+      tier: 'Tier-1 Core Ingress',
       status: isRecovered ? 'HEALTHY' : 'DEGRADED',
       healthColor: isRecovered ? 'green' : 'red',
       errorRate: isRecovered ? '0.70%' : `${errorRate.toFixed(1)}%`,
       deployment: isRecovered ? 'checkout-v41' : activeDeployment,
-      role: 'Order placement and cart validation',
+      role: 'Order placement and cart validation pipeline.',
+      protocol: 'HTTP/2 REST',
+      dependencies: ['payment-service', 'inventory-service', 'auth-service'],
     },
     {
       id: 'payment-service',
       name: 'PAYMENT SERVICE',
-      tier: 'Tier-1 Dependency',
+      tier: 'Tier-1 PSP Dependency',
       status: 'HEALTHY',
       healthColor: 'green',
       errorRate: '0.02%',
       deployment: 'payment-v12',
-      role: 'Credit card processing and PSP tokenization',
+      role: 'Credit card processing, gateway authorization, and PSP tokenization.',
+      protocol: 'gRPC / TLS',
+      dependencies: ['external-payment-gw'],
     },
     {
       id: 'inventory-service',
@@ -43,108 +49,221 @@ export const ServicesView: React.FC<ServicesViewProps> = ({
       healthColor: 'green',
       errorRate: '0.05%',
       deployment: 'inventory-v8',
-      role: 'Real-time stock reservation and SKU lock',
+      role: 'Real-time stock reservation, catalog availability, and SKU locking.',
+      protocol: 'gRPC / TLS',
+      dependencies: ['rds-postgresql'],
     },
     {
       id: 'auth-service',
       name: 'AUTH SERVICE',
-      tier: 'Tier-1 Shared',
+      tier: 'Tier-1 Shared Security',
       status: 'HEALTHY',
       healthColor: 'green',
       errorRate: '0.01%',
       deployment: 'auth-v3',
-      role: 'Session validation and customer JWT authentication',
+      role: 'Customer JWT session validation, OAuth2 tokens, and security claims.',
+      protocol: 'HTTP/2 REST',
+      dependencies: ['redis-cache'],
     },
   ]
 
+  const selectedService = services.find((s) => s.id === selectedServiceId) ?? services[0]
+
   return (
-    <div className="space-y-3 font-mono">
-      {/* Workspace Header */}
-      <div className="bg-rally-surface border border-rally-border rounded p-3.5 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-bold text-rally-text uppercase tracking-wider">
-              SERVICE TOPOLOGY & INFRASTRUCTURE REGISTRY
-            </h1>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
+      {/* ── 1. CINEMATIC EDITORIAL HERO ─────────────────────────────────── */}
+      <div className="relative overflow-hidden bg-obsidian border border-steel rounded p-6 sm:p-8 select-none">
+        <div className="absolute top-0 right-1/4 w-80 h-80 bg-signal-cyan/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-steel/60 pb-4 mb-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="w-2 h-2 rounded-full bg-signal-cyan" />
+            <span className="text-[10px] font-mono tracking-widest uppercase text-off-white font-semibold">
+              INFRASTRUCTURE TOPOLOGY & DEPENDENCY GRAPH
+            </span>
+            <span className="text-steel">|</span>
             <span
-              className={`px-2 py-0.2 rounded-sm text-xs font-bold uppercase ${
-                isRecovered
-                  ? 'bg-rally-green/20 text-rally-green border border-rally-green/40'
-                  : 'bg-rally-red/20 text-rally-red border border-rally-red/40'
+              className={`text-[10px] font-mono font-bold uppercase ${
+                isRecovered ? 'text-success-green' : 'text-crimson'
               }`}
             >
-              {isRecovered ? 'ALL SERVICES OPERATIONAL' : '1 SERVICE DEGRADED'}
+              {isRecovered ? 'ALL SERVICES OPERATIONAL' : '1 SERVICE ISOLATED (CHECKOUT)'}
             </span>
           </div>
-          <p className="text-xs text-rally-secondary font-sans mt-0.5">
-            Operational topology and telemetry health metrics for all services registered in the RALLY simulator environment.
-          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate('/overview')}
+              className="px-3.5 py-1.5 rounded bg-charcoal hover:bg-graphite border border-steel text-xs font-mono text-off-white transition-colors"
+            >
+              ← OVERVIEW COCKPIT
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('/evidence')}
+              className="px-3.5 py-1.5 rounded bg-charcoal hover:bg-graphite border border-steel text-xs font-mono text-off-white transition-colors"
+            >
+              FORENSIC EVIDENCE →
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={() => onNavigate('/overview')}
-          className="px-2.5 py-1 rounded bg-rally-bg border border-rally-border hover:border-rally-blue text-xs text-rally-secondary hover:text-rally-text"
-        >
-          Command Overview →
-        </button>
+        <div className="max-w-3xl">
+          <div className="font-editorial italic text-tactical-gold text-base sm:text-lg mb-1">
+            "Every failure has a boundary."
+          </div>
+          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl tracking-tight text-off-white leading-none uppercase">
+            SYSTEM TOPOLOGY
+          </h1>
+          <p className="font-sans text-sm sm:text-base text-ash mt-3 leading-relaxed">
+            Continuous dependency tracing and circuit-breaker monitoring across the RALLY microservice mesh. When anomalies occur, RALLY isolates the blast radius to protect downstream nodes.
+          </p>
+        </div>
       </div>
 
-      {/* Visual Dependency Topology Component */}
+      {/* ── 2. VISUAL TOPOLOGY GRAPH (INTERACTIVE SVG MAP) ───────────────── */}
       <ServiceTopology
         activeDeployment={activeDeployment}
         isRecovered={isRecovered}
         mcpActive={false}
+        selectedServiceId={selectedServiceId}
+        onSelectService={(id) => setSelectedServiceId(id)}
       />
 
-      {/* Service Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {services.map((svc) => {
-          const isDegraded = svc.status === 'DEGRADED'
-          return (
-            <div
-              key={svc.id}
-              className={`p-3.5 rounded border transition-all ${
-                isDegraded
-                  ? 'bg-rally-surface border-rally-red/50 shadow-sm'
-                  : 'bg-rally-surface border-rally-border'
-              }`}
-            >
-              <div className="flex items-center justify-between border-b border-rally-border pb-2">
-                <div>
-                  <h3 className="text-xs font-bold text-rally-text">{svc.name}</h3>
-                  <span className="text-[10px] text-rally-muted">{svc.tier}</span>
-                </div>
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-sm font-bold flex items-center gap-1 ${
-                    isDegraded
-                      ? 'bg-rally-red/15 text-rally-red border border-rally-red/40 animate-pulse'
-                      : 'bg-rally-green/15 text-rally-green border border-rally-green/40'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isDegraded ? 'bg-rally-red' : 'bg-rally-green'}`} />
-                  {svc.status}
+      {/* ── 3. ASYMMETRIC SPLIT: Node Inspector & Service Registry ───────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left: Interactive Service Detail Inspector */}
+        <div className="lg:col-span-5 bg-obsidian border border-steel rounded p-5 sm:p-6 select-none flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
+              <span>SERVICE TELEMETRY INSPECTOR</span>
+              <span className="text-tactical-gold font-bold">{selectedService.id}</span>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <span className="text-[9px] font-mono uppercase tracking-widest text-ash block">
+                  SERVICE IDENTITY
+                </span>
+                <h3 className="font-display text-3xl text-off-white tracking-wide uppercase mt-0.5">
+                  {selectedService.name}
+                </h3>
+                <span className="text-xs font-mono text-ash block mt-0.5">
+                  {selectedService.tier} • {selectedService.protocol}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs py-2.5">
-                <div>
-                  <span className="text-[10px] text-rally-muted uppercase block">ERROR RATE</span>
-                  <span className={`font-bold ${isDegraded ? 'text-rally-red' : 'text-rally-text'}`}>
-                    {svc.errorRate}
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-steel/60 font-mono text-xs">
+                <div className="bg-charcoal p-3 rounded border border-steel/70">
+                  <span className="text-[9px] text-ash uppercase block">HEALTH STATUS</span>
+                  <span
+                    className={`font-bold text-sm block mt-1 ${
+                      selectedService.status === 'HEALTHY' ? 'text-success-green' : 'text-crimson'
+                    }`}
+                  >
+                    {selectedService.status}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-rally-muted uppercase block">ACTIVE DEPLOYMENT</span>
-                  <span className="font-bold text-rally-text">{svc.deployment}</span>
+
+                <div className="bg-charcoal p-3 rounded border border-steel/70">
+                  <span className="text-[9px] text-ash uppercase block">ACTIVE DEPLOYMENT</span>
+                  <span className="text-off-white font-bold text-sm block mt-1">
+                    {selectedService.deployment}
+                  </span>
                 </div>
               </div>
 
-              <p className="text-[11px] text-rally-secondary font-sans border-t border-rally-border/60 pt-2">
-                {svc.role}
-              </p>
+              <div className="p-3 rounded bg-charcoal/70 border border-steel/70 font-sans text-xs">
+                <span className="font-mono text-[9px] uppercase tracking-widest text-ash block mb-1">
+                  FUNCTIONAL RESPONSIBILITY
+                </span>
+                <p className="text-off-white/90 leading-relaxed">
+                  {selectedService.role}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[9px] font-mono uppercase tracking-widest text-ash block mb-1.5">
+                  DOWNSTREAM DEPENDENCY CIRCUIT
+                </span>
+                <div className="flex flex-wrap gap-1.5 font-mono text-xs">
+                  {selectedService.dependencies.map((dep) => (
+                    <span
+                      key={dep}
+                      className="px-2 py-0.5 rounded bg-charcoal border border-steel/80 text-off-white/80 text-[10px]"
+                    >
+                      {dep}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
-          )
-        })}
+          </div>
+
+          <div className="pt-4 border-t border-steel/60 font-mono text-[10px] text-ash flex items-center justify-between">
+            <span>PROBED VIA MCP: get_service_health</span>
+            <span className="text-success-green font-bold">LIVE TELEMETRY</span>
+          </div>
+        </div>
+
+        {/* Right: Microservice Registry Table */}
+        <div className="lg:col-span-7 bg-obsidian border border-steel rounded p-5 sm:p-6 select-none">
+          <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
+            <span>REGISTERED MICROSERVICE NODES ({services.length})</span>
+            <span>CLICK TO FOCUS INSPECTOR</span>
+          </div>
+
+          <div className="overflow-x-auto mt-2">
+            <table className="w-full text-left text-xs border-collapse font-mono">
+              <thead>
+                <tr className="border-b border-steel/80 text-[10px] text-ash uppercase">
+                  <th className="pb-2">SERVICE</th>
+                  <th className="pb-2">TIER</th>
+                  <th className="pb-2">DEPLOYMENT</th>
+                  <th className="pb-2">ERROR RATE</th>
+                  <th className="pb-2 text-right">STATUS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-steel/40 text-xs">
+                {services.map((svc) => {
+                  const isSelected = selectedServiceId === svc.id
+                  const isDegraded = svc.status === 'DEGRADED'
+                  return (
+                    <tr
+                      key={svc.id}
+                      onClick={() => setSelectedServiceId(svc.id)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-graphite text-off-white border-l-2 border-tactical-gold pl-2'
+                          : 'hover:bg-charcoal/50 text-off-white/80'
+                      }`}
+                    >
+                      <td className="py-3 font-bold text-off-white">{svc.name}</td>
+                      <td className="py-3 text-[10px] text-ash">{svc.tier}</td>
+                      <td className="py-3 text-[11px] text-off-white">{svc.deployment}</td>
+                      <td className={`py-3 font-bold ${isDegraded ? 'text-crimson' : 'text-off-white'}`}>
+                        {svc.errorRate}
+                      </td>
+                      <td className="py-3 text-right">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] uppercase font-bold border ${
+                            isDegraded
+                              ? 'bg-crimson/15 text-crimson border-crimson/40 animate-pulse'
+                              : 'bg-success-green/15 text-success-green border-success-green/40'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isDegraded ? 'bg-crimson' : 'bg-success-green'}`} />
+                          {svc.status}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   )
