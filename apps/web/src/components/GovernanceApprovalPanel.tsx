@@ -18,79 +18,81 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
   onReject,
   isProcessing,
 }) => {
-  const isAwaitingApproval = state === 'AWAITING_APPROVAL'
+  const isAwaitingApproval = state === 'AWAITING_APPROVAL' || plan?.status === 'AWAITING_APPROVAL'
   const isExecuting = state === 'APPROVED' || state === 'EXECUTING'
-  const isVerifying = state === 'VERIFYING'
   const isResolved = state === 'RESOLVED' || execVerif.verification_status === 'PASSED'
   const isExecuted =
     execVerif.execution_status === 'EXECUTED' ||
     isExecuting ||
-    isVerifying ||
+    state === 'VERIFYING' ||
     isResolved
 
   return (
-    <div className="bg-rally-surface border border-rally-border rounded p-3 select-none flex flex-col justify-between font-mono">
-      <div className="flex items-center justify-between pb-1.5 border-b border-rally-border text-[10px] uppercase text-rally-muted tracking-wider">
-        <span>GOVERNANCE & CHANGE CONTROL</span>
+    <div className="bg-obsidian border border-steel rounded p-4 sm:p-5 select-none flex flex-col justify-between font-sans">
+      <div className="flex items-center justify-between pb-3 border-b border-steel/60 text-[10px] font-mono uppercase text-ash tracking-wider">
+        <span className="flex items-center gap-2">
+          <span className="text-warning-amber">🛡</span>
+          <span className="text-off-white font-medium">GOVERNANCE & APPROVAL BARRIER</span>
+        </span>
         <span
-          className={`font-semibold ${
+          className={`font-bold ${
             isAwaitingApproval
-              ? 'text-rally-amber'
+              ? 'text-warning-amber animate-pulse'
               : isResolved
-              ? 'text-rally-green'
+              ? 'text-success-green'
               : isExecuting
-              ? 'text-rally-blue'
-              : 'text-rally-secondary'
+              ? 'text-signal-cyan'
+              : 'text-ash'
           }`}
         >
           {isAwaitingApproval
-            ? 'APPROVAL REQUIRED'
+            ? 'APPROVAL MANDATED'
             : isResolved
             ? 'VERIFIED RESTORATION'
             : isExecuting
-            ? 'EXECUTING ROLLBACK'
+            ? 'DISPATCHING MUTATION'
             : 'CONTROLLED GATE'}
         </span>
       </div>
 
       {plan ? (
-        <div className="py-2 space-y-2.5 text-xs">
+        <div className="py-3 space-y-3 font-mono text-xs">
           {/* Action Spec */}
-          <div className="bg-rally-bg border border-rally-border rounded p-2.5">
-            <div className="flex items-center justify-between text-[10px] text-rally-muted uppercase">
-              <span className="font-bold text-rally-text">CHANGE PROPOSED</span>
-              <span className="text-rally-red font-bold">RISK: {plan.risk_level}</span>
+          <div className="bg-charcoal/80 border border-steel/80 rounded p-3">
+            <div className="flex items-center justify-between text-[10px] text-ash uppercase">
+              <span className="font-bold text-off-white">PROPOSED MUTATION</span>
+              <span className="text-warning-amber font-bold">RISK: {plan.risk_level} ({plan.risk_score}/100)</span>
             </div>
 
-            <div className="flex items-center gap-2 font-bold text-rally-text mt-1 text-xs">
-              <span className="text-rally-red">checkout-v42</span>
-              <span className="text-rally-muted">────────►</span>
-              <span className="text-rally-green">{plan.target_deployment_id}</span>
+            <div className="flex items-center gap-2 font-bold text-off-white mt-1.5 text-xs">
+              <span className="text-crimson line-through">checkout-v42</span>
+              <span className="text-ash">────────►</span>
+              <span className="text-success-green">{plan.target_deployment_id}</span>
             </div>
 
-            <div className="text-[10px] text-rally-muted mt-1">
-              BLAST RADIUS: <span className="text-rally-text">{plan.service_id}</span> • RISK SCORE: <span className="text-rally-amber">{plan.risk_score}/100</span>
+            <div className="text-[10px] text-ash mt-1">
+              BLAST RADIUS: <span className="text-off-white font-bold">{plan.service_id}</span>
             </div>
           </div>
 
-          <div className="text-[11px] text-rally-secondary leading-snug font-sans">
-            <span className="font-mono text-[10px] text-rally-muted block uppercase">REASON:</span>
-            {plan.reason || 'Deployment regression supported by observed telemetry.'}
+          <div className="text-xs text-ash leading-relaxed font-sans">
+            <span className="font-mono text-[10px] text-ash block uppercase font-bold">RATIONALE:</span>
+            {plan.reason || 'Deployment regression confirmed by forensic telemetry.'}
           </div>
 
           {/* HUMAN APPROVAL REQUIRED GATE */}
           {isAwaitingApproval && (
-            <div className="pt-2 border-t border-rally-border space-y-2">
-              <div className="flex items-center gap-2 text-xs text-rally-amber font-semibold">
-                <span className="w-2 h-2 rounded-full bg-rally-amber animate-ping" />
-                <span>⚠ HUMAN APPROVAL REQUIRED</span>
+            <div className="pt-2 border-t border-steel/60 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-mono text-warning-amber font-bold">
+                <span className="w-2 h-2 rounded-full bg-warning-amber animate-ping" />
+                <span>HUMAN AUTHORIZATION REQUIRED BEFORE EXECUTION</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={onReject}
                   disabled={isProcessing}
-                  className="px-3 py-1.5 rounded-sm bg-rally-bg border border-rally-border hover:border-rally-red/40 text-rally-secondary hover:text-rally-red text-xs font-mono font-medium transition-colors disabled:opacity-40"
+                  className="px-3 py-2 rounded bg-charcoal border border-steel hover:border-crimson text-ash hover:text-crimson text-xs font-mono font-bold transition-colors disabled:opacity-40"
                 >
                   REJECT
                 </button>
@@ -98,9 +100,9 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
                   type="button"
                   onClick={onApprove}
                   disabled={isProcessing}
-                  className="px-3 py-1.5 rounded-sm bg-rally-amber/20 hover:bg-rally-amber/30 border border-rally-amber/50 text-rally-amber font-mono font-bold text-xs transition-colors disabled:opacity-40 shadow-sm"
+                  className="px-3 py-2 rounded bg-tactical-gold hover:bg-tactical-gold/90 text-void-black font-mono font-bold text-xs transition-colors disabled:opacity-40 shadow-tactical-gold"
                 >
-                  {isProcessing ? 'COMMITTING…' : 'APPROVE ROLLBACK'}
+                  {isProcessing ? 'AUTHORIZING…' : 'APPROVE ROLLBACK'}
                 </button>
               </div>
             </div>
@@ -108,13 +110,12 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
 
           {/* EXECUTION & INDEPENDENT VERIFICATION */}
           {isExecuted && (
-            <div className="pt-2 border-t border-rally-border space-y-2 text-[11px]">
-              {/* Execution State */}
-              <div className="flex items-center justify-between text-rally-green font-semibold">
+            <div className="pt-2 border-t border-steel/60 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-success-green font-mono font-semibold">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rally-green" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
                   <span>
-                    {isExecuting ? 'EXECUTING: checkout-v42 → checkout-v41' : 'ROLLBACK EXECUTED'}
+                    {isExecuting ? 'EXECUTING: checkout-v42 → checkout-v41' : 'ROLLBACK EXECUTED & AUDITED'}
                   </span>
                 </div>
                 <span>✓</span>
@@ -122,36 +123,36 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
 
               {/* Independent Verification Panel */}
               <div
-                className={`p-2.5 rounded border transition-all ${
+                className={`p-3 rounded border font-mono transition-all ${
                   isResolved
-                    ? 'bg-rally-green/10 border-rally-green/40 text-rally-green'
-                    : 'bg-rally-bg border-rally-border text-rally-secondary'
+                    ? 'bg-charcoal/80 border-success-green/40 text-success-green'
+                    : 'bg-charcoal border-steel text-ash'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs font-bold mb-1">
                   <span>INDEPENDENT VERIFICATION</span>
-                  <span>{isResolved ? '✓ PASSED' : 'IN PROGRESS'}</span>
+                  <span>{isResolved ? '✓ PASSED' : 'PROBING...'}</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-1 text-[10px] text-rally-text py-1 border-t border-b border-rally-border/60">
+                <div className="grid grid-cols-3 gap-1 text-[10px] text-off-white py-1 border-t border-b border-steel/60">
                   <div>
-                    <span className="text-rally-muted block">HEALTH</span>
-                    <span className="text-rally-green font-bold">HEALTHY</span>
+                    <span className="text-ash block">HEALTH</span>
+                    <span className="text-success-green font-bold">HEALTHY</span>
                   </div>
                   <div>
-                    <span className="text-rally-muted block">ERROR RATE</span>
-                    <span className="text-rally-green font-bold">
-                      {isResolved ? '0.70%' : '18.4% → 0.70%'}
+                    <span className="text-ash block">ERROR RATE</span>
+                    <span className="text-success-green font-bold">
+                      {isResolved ? '0.70%' : 'RESTORED'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-rally-muted block">DEPLOYMENT</span>
-                    <span className="text-rally-green font-bold">checkout-v41</span>
+                    <span className="text-ash block">DEPLOYMENT</span>
+                    <span className="text-success-green font-bold">checkout-v41</span>
                   </div>
                 </div>
 
                 {isResolved && (
-                  <div className="text-[10px] font-bold text-rally-green mt-1">
+                  <div className="text-[10px] font-bold text-success-green mt-1">
                     ✓ RECOVERY INDEPENDENTLY VERIFIED
                   </div>
                 )}
@@ -160,7 +161,7 @@ export const GovernanceApprovalPanel: React.FC<GovernanceApprovalPanelProps> = (
           )}
         </div>
       ) : (
-        <div className="py-8 text-center text-xs text-rally-muted">
+        <div className="py-10 text-center text-xs font-mono text-ash">
           No action proposed. Remediation plan formulated following root-cause deduction.
         </div>
       )}
