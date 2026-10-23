@@ -71,6 +71,7 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false)
 
   // Keyboard shortcut listener for Cmd/Ctrl+K and Sidebar Collapse ([)
   useEffect(() => {
@@ -92,10 +93,11 @@ function App() {
         return
       }
 
-      // Escape closes mobile nav or command palette
+      // Escape closes mobile nav, command palette, or copilot
       if (e.key === 'Escape') {
         setIsMobileNavOpen(false)
         setIsCommandPaletteOpen(false)
+        setIsCopilotOpen(false)
       }
     }
 
@@ -451,7 +453,7 @@ function App() {
         onToggleMobileNav={() => setIsMobileNavOpen((prev) => !prev)}
       />
 
-      {/* ── 2. THREE-ZONE COCKPIT SHELL ─────────────────────────────── */}
+      {/* ── 2. TWO-ZONE TACTICAL COCKPIT SHELL ─────────────────────── */}
       <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
         {/* ZONE 1: TACTICAL NAVIGATION RAIL */}
         <NavigationRail
@@ -464,10 +466,10 @@ function App() {
           onMobileClose={() => setIsMobileNavOpen(false)}
         />
 
-        {/* ZONE 2: PRIMARY WORKSPACE (CENTER DOMINANT) */}
-        <main className="flex-1 p-3 sm:p-4 overflow-y-auto min-w-0">
+        {/* ZONE 2: PRIMARY SPACIOUS WORKSPACE (FULL WIDTH) */}
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto min-w-0">
           {apiError && state && (
-            <div className="mb-3 p-2.5 rounded bg-crimson/10 border border-crimson/30 text-xs font-mono text-crimson flex items-center justify-between">
+            <div className="max-w-7xl mx-auto mb-4 p-3 rounded bg-crimson/10 border border-crimson/30 text-xs font-mono text-crimson flex items-center justify-between">
               <span>{apiError}</span>
               <button
                 onClick={() => setApiErrorState(null)}
@@ -480,13 +482,31 @@ function App() {
           {renderWorkspaceView()}
         </main>
 
-        {/* ZONE 3: RALLY COPILOT (RIGHT ZONE, 350px) */}
+        {/* FLOATING COPILOT TRIGGER BUTTON */}
+        {!isCopilotOpen && (
+          <button
+            type="button"
+            onClick={() => setIsCopilotOpen(true)}
+            title="Ask RALLY Autonomous Copilot"
+            className="fixed bottom-10 right-4 sm:right-6 px-4 py-2.5 rounded bg-obsidian border border-tactical-gold/60 hover:border-tactical-gold text-xs font-mono font-bold text-tactical-gold shadow-tactical-gold flex items-center gap-2 transition-all hover:scale-105 z-30"
+          >
+            <span className="text-sm">✦</span>
+            <span>ASK RALLY</span>
+            {isProcessing && (
+              <span className="w-1.5 h-1.5 rounded-full bg-tactical-gold animate-ping" />
+            )}
+          </button>
+        )}
+
+        {/* FLOATING COPILOT OVERLAY */}
         <ConversationalPanel
           messages={messages}
           onSendMessage={handleSendMessage}
           isProcessing={isProcessing}
           state={activeState}
           confidence={state?.confidence}
+          isOpen={isCopilotOpen}
+          onClose={() => setIsCopilotOpen(false)}
         />
       </div>
 

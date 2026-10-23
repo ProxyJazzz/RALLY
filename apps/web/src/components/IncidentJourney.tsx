@@ -7,42 +7,42 @@ interface IncidentJourneyProps {
 type StageKey =
   | 'UNDERSTAND'
   | 'INVESTIGATE'
-  | 'REASON'
+  | 'EVIDENCE'
+  | 'HYPOTHESIS'
   | 'PLAN'
-  | 'APPROVE'
+  | 'APPROVAL'
   | 'EXECUTE'
   | 'VERIFY'
   | 'RESOLVE'
 
-const STAGES: StageKey[] = [
-  'UNDERSTAND',
-  'INVESTIGATE',
-  'REASON',
-  'PLAN',
-  'APPROVE',
-  'EXECUTE',
-  'VERIFY',
-  'RESOLVE',
+const STAGES: { key: StageKey; num: string; label: string }[] = [
+  { key: 'UNDERSTAND', num: '01', label: 'INCIDENT' },
+  { key: 'INVESTIGATE', num: '02', label: 'INVESTIGATE' },
+  { key: 'EVIDENCE', num: '03', label: 'EVIDENCE' },
+  { key: 'HYPOTHESIS', num: '04', label: 'HYPOTHESIS' },
+  { key: 'PLAN', num: '05', label: 'PLAN' },
+  { key: 'APPROVAL', num: '06', label: 'APPROVAL' },
+  { key: 'EXECUTE', num: '07', label: 'EXECUTE' },
+  { key: 'VERIFY', num: '08', label: 'VERIFY' },
+  { key: 'RESOLVE', num: '09', label: 'RESOLVE' },
 ]
 
 export const IncidentJourney: React.FC<IncidentJourneyProps> = ({ state }) => {
-  // Determine status for each stage derived directly from real backend state
-  const getStageStatus = (stageIdx: number): 'completed' | 'current' | 'warning' | 'critical' | 'future' => {
+  const getStageStatus = (
+    stageIdx: number
+  ): 'completed' | 'current' | 'warning' | 'critical' | 'future' => {
     if (state === 'IDLE') return 'future'
-
-    if (state === 'RESOLVED') {
-      return 'completed'
-    }
+    if (state === 'RESOLVED') return 'completed'
 
     let currentIdx = 0
     if (state === 'RECEIVED' || state === 'TRIAGING') currentIdx = 0
     else if (state === 'INVESTIGATING') currentIdx = 1
     else if (state === 'REASONING') currentIdx = 2
-    else if (state === 'PLANNING') currentIdx = 3
-    else if (state === 'AWAITING_APPROVAL') currentIdx = 4
-    else if (state === 'APPROVED' || state === 'EXECUTING') currentIdx = 5
-    else if (state === 'VERIFYING') currentIdx = 6
-    else if (state === 'RESOLVED') currentIdx = 7
+    else if (state === 'PLANNING') currentIdx = 4
+    else if (state === 'AWAITING_APPROVAL') currentIdx = 5
+    else if (state === 'APPROVED' || state === 'EXECUTING') currentIdx = 6
+    else if (state === 'VERIFYING') currentIdx = 7
+    else if (state === 'RESOLVED') currentIdx = 8
 
     if (stageIdx < currentIdx) return 'completed'
     if (stageIdx === currentIdx) {
@@ -54,67 +54,74 @@ export const IncidentJourney: React.FC<IncidentJourneyProps> = ({ state }) => {
   }
 
   return (
-    <div className="bg-rally-surface border border-rally-border rounded p-3 select-none flex flex-col justify-between">
-      <div className="flex items-center justify-between text-[10px] font-mono uppercase text-rally-muted tracking-wider mb-2">
-        <span className="flex items-center gap-1.5">
-          <span>INCIDENT LIFECYCLE PIPELINE</span>
-          <span className="text-rally-secondary">•</span>
-          <span className="text-rally-cyan font-bold">{state}</span>
-        </span>
-        <span className="text-rally-secondary">
-          {state === 'RESOLVED' ? '8 / 8 COMPLETED' : 'PROGRESS MONITORED'}
+    <div className="bg-obsidian border border-steel/80 rounded p-4 sm:p-5 select-none">
+      {/* Top Section Header */}
+      <div className="flex items-center justify-between pb-3 mb-4 border-b border-steel/60 text-[10px] font-mono tracking-widest uppercase text-ash">
+        <div className="flex items-center gap-2">
+          <span className="text-tactical-gold font-mono">◈</span>
+          <span className="font-semibold text-off-white">TACTICAL INCIDENT JOURNEY</span>
+          <span className="text-steel">|</span>
+          <span className="text-tactical-gold font-bold">STATE: {state}</span>
+        </div>
+        <span className="text-ash">
+          {state === 'RESOLVED' ? '9 / 9 STAGES COMPLETED' : 'AUTONOMOUS RUNTIME ACTIVE'}
         </span>
       </div>
 
-      {/* Connected Nodes Pipeline: ●━━━━●━━━━●━━━━◉━━━━○ */}
-      <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1">
+      {/* Cinematic Horizontal Pipeline (Desktop) / Vertical progression (Mobile) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3">
         {STAGES.map((stage, idx) => {
           const status = getStageStatus(idx)
-          const isLast = idx === STAGES.length - 1
 
-          let nodeDot = 'bg-rally-muted text-rally-muted'
-          let nodeBox = 'border-rally-border bg-rally-bg text-rally-muted'
-          let lineBg = 'bg-rally-border'
+          let markerClasses = 'text-ash border-steel/60 bg-charcoal/40'
+          let titleClasses = 'text-ash'
+          let numberClasses = 'text-ash/60'
 
           if (status === 'completed') {
-            nodeDot = 'bg-rally-green text-rally-green ring-2 ring-rally-green/20'
-            nodeBox = 'border-rally-green/50 bg-rally-green/10 text-rally-green font-bold'
-            lineBg = 'bg-rally-green'
+            markerClasses = 'text-success-green border-success-green/60 bg-success-green/10 ring-1 ring-success-green/20'
+            titleClasses = 'text-off-white'
+            numberClasses = 'text-success-green'
           } else if (status === 'current') {
-            nodeDot = 'bg-rally-blue text-rally-blue ring-4 ring-rally-blue/30 animate-pulse'
-            nodeBox = 'border-rally-blue bg-rally-blue/15 text-rally-blue font-bold shadow-sm'
-            lineBg = 'bg-rally-border'
+            markerClasses = 'text-tactical-gold border-tactical-gold bg-tactical-gold/15 ring-2 ring-tactical-gold/30 animate-pulse'
+            titleClasses = 'text-tactical-gold font-bold'
+            numberClasses = 'text-tactical-gold'
           } else if (status === 'warning') {
-            nodeDot = 'bg-rally-amber text-rally-amber ring-4 ring-rally-amber/30 animate-ping'
-            nodeBox = 'border-rally-amber bg-rally-amber/20 text-rally-amber font-bold'
-            lineBg = 'bg-rally-border'
+            markerClasses = 'text-warning-amber border-warning-amber bg-warning-amber/20 ring-2 ring-warning-amber/40 animate-pulse'
+            titleClasses = 'text-warning-amber font-bold'
+            numberClasses = 'text-warning-amber'
           } else if (status === 'critical') {
-            nodeDot = 'bg-rally-red text-rally-red ring-2 ring-rally-red/20'
-            nodeBox = 'border-rally-red bg-rally-red/20 text-rally-red font-bold'
-            lineBg = 'bg-rally-border'
+            markerClasses = 'text-crimson border-crimson bg-crimson/20'
+            titleClasses = 'text-crimson font-bold'
+            numberClasses = 'text-crimson'
           }
 
           return (
-            <React.Fragment key={stage}>
-              <div className="flex flex-col items-center min-w-[76px] flex-1">
-                {/* Node indicator */}
-                <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center mb-1.5 transition-all ${nodeDot}`}>
-                  {status === 'completed' && <span className="text-[8px] font-bold text-black">✓</span>}
-                </div>
-
-                {/* Stage Label Box */}
-                <div className={`w-full py-1 rounded-sm border text-center transition-all ${nodeBox}`}>
-                  <span className="text-[10px] font-mono tracking-wider block truncate px-1">
-                    {stage}
-                  </span>
-                </div>
+            <div
+              key={stage.key}
+              className={`p-2.5 rounded border flex flex-col justify-between transition-all ${markerClasses}`}
+            >
+              <div className="flex items-center justify-between font-mono text-[9px]">
+                <span className={`font-bold ${numberClasses}`}>{stage.num}</span>
+                {status === 'completed' && <span className="text-success-green font-bold">✓</span>}
+                {status === 'current' && <span className="w-1.5 h-1.5 rounded-full bg-tactical-gold animate-ping" />}
+                {status === 'warning' && <span className="w-1.5 h-1.5 rounded-full bg-warning-amber animate-pulse" />}
               </div>
 
-              {/* Connecting rail line */}
-              {!isLast && (
-                <div className={`h-0.5 flex-1 min-w-[12px] mx-1 self-center -mt-6 transition-all ${lineBg}`} />
-              )}
-            </React.Fragment>
+              <div className="mt-2">
+                <span className={`font-display text-sm tracking-wider block uppercase truncate ${titleClasses}`}>
+                  {stage.label}
+                </span>
+                <span className="text-[9px] font-mono uppercase text-ash/70 block mt-0.5">
+                  {status === 'completed'
+                    ? 'VERIFIED'
+                    : status === 'current'
+                    ? 'ACTIVE'
+                    : status === 'warning'
+                    ? 'GATEWAY'
+                    : 'PENDING'}
+                </span>
+              </div>
+            </div>
           )
         })}
       </div>
